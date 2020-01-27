@@ -1,4 +1,4 @@
-# If pretrained model doesn't exist, load it - in future iterations, we would be training new models
+#If pretrained model doesn't exist, load it - in future iterations, we would be training new models
 # If outputs on validation data don't exist, produce them
 #   To do this, we want to produce all possible permutations of augmentations. This can be done using the ttach package. The augmentations we will consider are the fivecrops, horizontal flips, color jitter, brightness and scaling. This will produce some number of augmentations - not sure 
 # If outputs on training data don't exist, produce them
@@ -15,6 +15,7 @@ import ttach as tta
 from models import get_pretrained_model
 from dataloaders import get_imnet_dataloader
 from augmentations import write_augmentation_outputs, write_aug_list, get_single_aug_idxs
+from ranking import write_ranking_outputs
 from gpu_utils import restrict_GPU_pytorch
 from tta_utils import check_if_finished
 
@@ -22,9 +23,9 @@ gpu_arg = sys.argv[2]
 restrict_GPU_pytorch(gpu_arg)
 ssl._create_default_https_context = ssl._create_unverified_context
 
-train_dir = "/data/ddmg/neuro/datasets/imagenet-first-050-of-each"
+train_dir = "/data/ddmg/neuro/datasets/imagenet-first-100-of-each"
 val_dir = "/data/ddmg/neuro/datasets/ILSVRC2012/val"
-train_output_dir = "./outputs/model_outputs/train"
+train_output_dir = "./outputs/model_outputs/train100"
 val_output_dir = "./outputs/model_outputs/val"
 ranking_output_dir = "./outputs/ranking_outputs"
 aggregated_outputs_dir = "./outputs/aggregated_outputs/"
@@ -59,10 +60,12 @@ print("[X] Train outputs written!")
 
 # Learn ranking of set of augmentations
 # Methods: OMP, LR
-rank_model_names = ['OMP', 'LR', 'APAC']
-for rank_model_name in rank_model_names:
-    if not os.path.exists(ranking_output_dir + "/" + model_name + "/" + rank_model_name + ".h5"):
-        write_ranking_outputs(model_name, rank_model_name)
+rank_names = ['OMP', 'LR']
+aug_names = ['combo']
+for rank_name in rank_names:
+    for aug_name in aug_names:
+        if not os.path.exists(ranking_output_dir + "/" + model_name + "/"  + rank_name+ '/'+ aug_name + ".h5"):
+            write_ranking_outputs(model_name, aug_name, rank_name)
 print("[X] Ranking outputs written!")
 
 # Learn aggregation of augmentation outputs

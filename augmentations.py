@@ -1,11 +1,8 @@
-import pdb
 import os
-import numpy as np
 import h5py
 import torch
+import numpy as np
 from tqdm import tqdm 
-import time
-import cProfile
 from aug_cartesian_product import AUG_ORDER, AUG_CART_PRODUCT
 
 def write_aug_list(aug_transform_parameters, aug_order):
@@ -34,7 +31,6 @@ def write_aug_list(aug_transform_parameters, aug_order):
         parsed = [parse_f(param) for parse_f,param in zip(parse_fs,params)]
         parsed_params.append(parsed)
     return parsed_params
-
 
 def get_start_ind(output_file, mode, n_batches_per_write):
     with h5py.File(output_file, mode) as hf:
@@ -88,7 +84,7 @@ def write_augmentation_outputs(tta_model, dataloader, output_file):
             end = start + min(batch_size,output.shape[1])
             all_outputs[:,start:end,:] = output
             all_targets[start:end] = target
-# These functions are to isolate the transforms from the cartesian product
+
 def get_single_aug_idxs(aug_name):
     other_col_idxs = np.where(np.array(AUG_ORDER) != aug_name)[0]        
     other_cols_sum = np.sum(AUG_CART_PRODUCT[:,other_col_idxs], axis=1)

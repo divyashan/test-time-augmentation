@@ -15,10 +15,9 @@ def get_agg_f(aug_name, agg_name, model_name):
             print("[ ] Training LR model")
             # train the model
             model = train_tta_lr(model_name, aug_name, 5) 
-        else:
-            print("[X] LR Model Trained") 
-            model = TTARegression(len(aug_idxs),1000,'even')
-            model.load_state_dict(torch.load(model_path))
+        print("[X] LR Model Trained") 
+        model = TTARegression(len(aug_idxs),1000,'even')
+        model.load_state_dict(torch.load(model_path))
         model.eval()
         return model
 
@@ -31,7 +30,6 @@ def mean_agg_f(n_augs):#
     coeffs[:,:] = 1/n_augs
     coeffs = torch.Tensor(coeffs)
     def agg_f(inputs):
-        pdb.set_trace()
         mult = inputs*coeffs
         return mult.sum(axis=1)
     return agg_f

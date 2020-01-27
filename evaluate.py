@@ -75,22 +75,19 @@ def evaluate(model_name, aug_name, agg_name):
 #    return score 
 
 def evaluate_all():
-    model_names = ['resnet18', 'resnet50', 'MobileNetV2']
-    aug_names = ['orig', 'hflip', 'five_crop', 'colorjitter', 'rotate', 'combo']
+    model_names = ['resnet18', 'resnet50', 'resnet101', 'MobileNetV2']
+    aug_names = ['orig', 'hflip', 'five_crop', 'colorjitter', 'rotation', 'combo']
     agg_names = ['mean', 'lr']
     
     results = []
     for model_name in model_names:
         for aug_name in aug_names:
             for agg_name in agg_names:
-                try:
-                    mo = ModelOutputs(model_name, aug_name)
-                    # Combines + scores these model outputs
-                    top1, top5 = mo.apply(agg_name)
-                    results.append({'model':model_name, 'aug':aug_name, 'agg':agg_name, 'top1':top1, 'top5':top5})
-                    pd.DataFrame(results).to_csv('./results/agg_fs')
-                except:
-                    pass 
+                mo = ModelOutputs(model_name, aug_name)
+                # Combines + scores these model outputs
+                top1, top5 = mo.apply(agg_name)
+                results.append({'model':model_name, 'aug':aug_name, 'agg':agg_name, 'top1':top1, 'top5':top5})
+                pd.DataFrame(results).to_csv('./results/agg_fs')
 evaluate_all()
 """
 model_name = sys.argv[1]
