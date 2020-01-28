@@ -16,7 +16,7 @@ from models import get_pretrained_model
 from dataloaders import get_imnet_dataloader
 from augmentations import write_augmentation_outputs, write_aug_list, get_single_aug_idxs
 from evaluate import write_aggregation_outputs
-from ranking import write_ranking_outputs, train_ranked_lrs
+from ranking import write_ranking_outputs, train_ranked_lrs, evaluate_ranking
 from gpu_utils import restrict_GPU_pytorch
 from tta_utils import check_if_finished
 
@@ -59,10 +59,8 @@ if not check_if_finished(output_file):
     write_augmentation_outputs(tta_model, dataloader, output_file)
 print("[X] Train outputs written!")
 
-# Learn ranking of set of augmentations
-# Methods: OMP, LR
-rank_names = ['OMP', 'LR', 'APAC']
 aug_names = ['combo']
+rank_names = ['OMP', 'LR', 'APAC']
 for rank_name in rank_names:
     for aug_name in aug_names:
         print("RANK ALG: ", rank_name, "\tAUG: ", aug_name)
@@ -73,8 +71,11 @@ for rank_name in rank_names:
         print("[X] Ranking outputs written!")
         print("[X] Ranked logistic regressions trained!")
 
-# Learn aggregation of augmentation outputs
-# Methods: Mean, max, #augmentations-LR, #classes*#augmentations LR
-write_aggregation_outputs(model_name)
-print("[X] Aggregated outputs written!")
+evaluate_ranking(model_name)
+print("[X] Ranking outputs evaluated!")
 
+evaluate_aggregation_outputs(model_name)
+print("[X] Aggregated outputs written + evaluated!")
+
+evaluate_thresholding(model_name)
+print("[X] Thresholding evaluated!")

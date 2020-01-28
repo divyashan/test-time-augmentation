@@ -47,6 +47,7 @@ class ModelOutputs():
                     agg_outputs = torch.Tensor(agg_outputs)
                     labels = torch.Tensor(labels)
                     scores= accuracy(agg_outputs, labels, topk=(1,5))
+                    print(len(agg_outputs))
                     top1s.append(scores[0].item())
                     top5s.append(scores[1].item())
         return np.mean(top1s), np.mean(top5s)
@@ -79,9 +80,9 @@ def write_aggregation_outputs(model_name):
     results = []
     for aug_name in aug_names:
         for agg_name in agg_names:
+            print("AUG: ", aug_name, "\tAGG: ", agg_name)
             if aug_name == 'orig' and agg_name != 'mean':
                 continue
-            print("AUG: ", aug_name, "\tAGG: ", agg_name)
             mo = ModelOutputs(model_name, aug_name)
             # Combines + scores these model outputs
             top1, top5 = mo.apply(agg_name)
