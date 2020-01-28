@@ -1,0 +1,17 @@
+LICENSE
+MANIFEST.in
+README.md
+requirements.txt
+setup.py
+ttach/__init__.py
+ttach/__version__.py
+ttach/aliases.py
+ttach/base.py
+ttach/functional.py
+ttach/transforms.py
+ttach/wrappers.py
+ttach.egg-info/PKG-INFO
+ttach.egg-info/SOURCES.txt
+ttach.egg-info/dependency_links.txt
+ttach.egg-info/requires.txt
+ttach.egg-info/top_level.txt
