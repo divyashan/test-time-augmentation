@@ -1,6 +1,6 @@
 # Given a model_name + aug_name, apply thresholding to the aggregated outputs
 # Where thresholding is using the original prediction depending on the predicted probability
-from imagenet_utils import accuracy
+from utils.imagenet_utils import accuracy
 from aug_cartesian_product import AUG_ORDER
 import pandas as pd
 

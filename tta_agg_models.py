@@ -8,10 +8,6 @@ import itertools
 import torch
 from torch import nn
 
-from gpu_utils import restrict_GPU_pytorch
-from imagenet_utils import accuracy, AverageMeter, ProgressMeter
-
-
 class TTARegression(nn.Module):
     def __init__(self, n_augs, n_classes, initialization='even'):
         super().__init__()

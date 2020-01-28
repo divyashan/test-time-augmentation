@@ -17,8 +17,8 @@ from dataloaders import get_imnet_dataloader
 from augmentations import write_augmentation_outputs, write_aug_list, get_single_aug_idxs
 from evaluate import write_aggregation_outputs
 from ranking import write_ranking_outputs, train_ranked_lrs, evaluate_ranking
-from gpu_utils import restrict_GPU_pytorch
-from tta_utils import check_if_finished
+from utils.gpu_utils import restrict_GPU_pytorch
+from utils.tta_utils import check_if_finished
 
 gpu_arg = sys.argv[2]
 restrict_GPU_pytorch(gpu_arg)

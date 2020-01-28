@@ -6,7 +6,7 @@ import numpy as np
 
 from tta_train import train_tta_lr
 from augmentations import get_aug_idxs
-from tta_utils import check_if_finished
+from utils.tta_utils import check_if_finished
 from tta_agg_models import TTARegression, TTAPartialRegression 
 
 from tqdm import tqdm

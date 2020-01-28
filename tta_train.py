@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from tta_agg_models import TTARegression, TTAPartialRegression
-from imagenet_utils import accuracy, AverageMeter, ProgressMeter
+from utils.imagenet_utils import accuracy, AverageMeter, ProgressMeter
 from augmentations import get_aug_idxs
 
 def train_tta_lr(model_name, aug_name, epochs, agg_name):
