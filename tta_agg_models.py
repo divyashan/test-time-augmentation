@@ -28,3 +28,19 @@ class TTARegression(nn.Module):
         mult = self.coeffs * x
         return mult.sum(axis=1)
 
+class TTAPartialRegression(nn.Module):
+    def __init__(self, n_augs, n_classes, initialization='even'):
+        super().__init__()
+        # To make "a" and "b" real parameters of the model, we need to wrap them with nn.Parameter
+        self.coeffs = nn.Parameter(torch.randn((n_augs,1 ), requires_grad=True, dtype=torch.float))
+        if initialization == 'even':
+            self.coeffs.data.fill_(1.0/n_augs) 
+        elif initialization== 'original':
+            self.coeffs.data[0,:].fill_(1)
+            self.coeffs.data[1,:].fill_(0)
+             
+    def forward(self, x):
+        # Computes the outputs / predictions
+        mult = torch.matmul(x.transpose(1, 2), self.coeffs)
+        return mult.squeeze()
+

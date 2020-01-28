@@ -9,7 +9,6 @@ import pandas as pd
 from tqdm import tqdm 
 from augmentations import get_aug_idxs
 from aggregation import get_agg_f
-from tta_train import train_tta_lr 
 from imagenet_utils import accuracy
 from gpu_utils import restrict_GPU_pytorch
 # Take in indices of diff augmentations
@@ -30,7 +29,7 @@ class ModelOutputs():
                 
     def apply(self, agg_name):
         agg_f = get_agg_f(self.aug_name, agg_name, self.model_name)
-        agg_outputs_path = self.agg_outputs_folder + '/' + agg_name + '.h5'
+        agg_outputs_path = self.agg_outputs_folder + '/' + agg_name + '_test.h5'
         top1s, top5s = [], []
         with h5py.File(agg_outputs_path) as hf_agg:
             with h5py.File(self.val_outputs_path) as hf:
@@ -71,36 +70,25 @@ def evaluate(model_name, aug_name, agg_name):
     mo = ModelOutputs(model_name, aug_name)
     # Combines + scores these model outputs 
     score = mo.apply(agg_name)
+    return score
 
-#    return score 
-
-def evaluate_all():
-    model_names = ['resnet18', 'resnet50', 'resnet101', 'MobileNetV2']
-    aug_names = ['orig', 'hflip', 'five_crop', 'colorjitter', 'rotation', 'combo']
-    agg_names = ['mean', 'lr']
+def write_aggregation_outputs(model_name):
+    aug_names = ['hflip', 'orig','five_crop', 'colorjitter', 'rotation', 'combo']
+    agg_names = ['mean', 'partial_lr', 'full_lr', 'max'] 
     
     results = []
-    for model_name in model_names:
-        for aug_name in aug_names:
-            for agg_name in agg_names:
-                mo = ModelOutputs(model_name, aug_name)
-                # Combines + scores these model outputs
-                top1, top5 = mo.apply(agg_name)
-                results.append({'model':model_name, 'aug':aug_name, 'agg':agg_name, 'top1':top1, 'top5':top5})
-                pd.DataFrame(results).to_csv('./results/agg_fs')
-evaluate_all()
-"""
-model_name = sys.argv[1]
-score = evaluate(model_name, 'hflip', 'lr')
-print(score)
-score = evaluate(model_name, 'hflip', 'mean')
-print(score)
-score = evaluate(model_name, 'five_crop', 'mean')
-print(score)
-score = evaluate(model_name, 'colorjitter', 'mean')
-print(score)
-score = evaluate(model_name, 'rotation', 'mean')
-print(score)
-score = evaluate(model_name, 'combo', 'mean')
-print(score)
-"""
+    for aug_name in aug_names:
+        for agg_name in agg_names:
+            if aug_name == 'orig' and agg_name != 'mean':
+                continue
+            print("AUG: ", aug_name, "\tAGG: ", agg_name)
+            mo = ModelOutputs(model_name, aug_name)
+            # Combines + scores these model outputs
+            top1, top5 = mo.apply(agg_name)
+            results.append({'model':model_name, 'aug':aug_name, 'agg':agg_name, 'top1':top1, 'top5':top5})
+            pd.DataFrame(results).to_csv('./results/' + model_name + '_agg_fs')
+
+if __name__ == '__main__':
+    model_name = sys.argv[1]
+    write_aggregation_outputs(sys.argv[1])
+    #print('Score: ', evaluate(model_name, 'five_crop', 'lr'))

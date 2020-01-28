@@ -15,7 +15,8 @@ import ttach as tta
 from models import get_pretrained_model
 from dataloaders import get_imnet_dataloader
 from augmentations import write_augmentation_outputs, write_aug_list, get_single_aug_idxs
-from ranking import write_ranking_outputs
+from evaluate import write_aggregation_outputs
+from ranking import write_ranking_outputs, train_ranked_lrs
 from gpu_utils import restrict_GPU_pytorch
 from tta_utils import check_if_finished
 
@@ -25,7 +26,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 train_dir = "/data/ddmg/neuro/datasets/imagenet-first-100-of-each"
 val_dir = "/data/ddmg/neuro/datasets/ILSVRC2012/val"
-train_output_dir = "./outputs/model_outputs/train100"
+train_output_dir = "./outputs/model_outputs/train"
 val_output_dir = "./outputs/model_outputs/val"
 ranking_output_dir = "./outputs/ranking_outputs"
 aggregated_outputs_dir = "./outputs/aggregated_outputs/"
@@ -60,20 +61,20 @@ print("[X] Train outputs written!")
 
 # Learn ranking of set of augmentations
 # Methods: OMP, LR
-rank_names = ['OMP', 'LR']
+rank_names = ['OMP', 'LR', 'APAC']
 aug_names = ['combo']
 for rank_name in rank_names:
     for aug_name in aug_names:
+        print("RANK ALG: ", rank_name, "\tAUG: ", aug_name)
         if not os.path.exists(ranking_output_dir + "/" + model_name + "/"  + rank_name+ '/'+ aug_name + ".h5"):
             write_ranking_outputs(model_name, aug_name, rank_name)
-print("[X] Ranking outputs written!")
+        if not os.path.exists('./agg_models/ranking/' + aug_name + '/' + rank_name+ '/' + model_name + '/9.pth'):
+            train_ranked_lrs(model_name, aug_name, rank_name)
+        print("[X] Ranking outputs written!")
+        print("[X] Ranked logistic regressions trained!")
 
 # Learn aggregation of augmentation outputs
 # Methods: Mean, max, #augmentations-LR, #classes*#augmentations LR
-agg_model_names = ['mean', 'max', 'augs_LR', 'class_augs_LR']
-for agg_model_name in agg_model_names:
-    if not os.path.exists(aggregated_outputs_dir + "/" + model_name + "/" + agg_model_name + ".h5"):
-        write_aggregated_outputs(model_name, agg_model_name)
+write_aggregation_outputs(model_name)
 print("[X] Aggregated outputs written!")
-
 
