@@ -26,6 +26,7 @@ def write_ranking_outputs(model_name, aug_name, ranking_name):
     outputs_file_val = './outputs/model_outputs/val/' + model_name + '.h5'
     ranking_outputs_path_train = './ranking_outputs/train/' + model_name + '/' + ranking_name + '/'
     ranking_outputs_path_val = './ranking_outputs/val/' + model_name + '/' + ranking_name + '/'
+    ranked_idices = './top_ten_augs/' + model_name + '.txt'
     outputs_files = [outputs_file_train, outputs_file_val]
     ranking_outputs_paths = [ranking_outputs_path_train, ranking_outputs_path_val]
 
@@ -45,14 +46,17 @@ def write_ranking_outputs(model_name, aug_name, ranking_name):
     
     # Get ranking
     if ranking_name == 'OMP':
-        if model_name == 'resnet18':
-            ranking = np.array([48, 54, 0, 14, 7, 49, 56, 30, 42, 32])
-        elif model_name == 'resnet50':
-            ranking = np.array([14, 43, 54, 48, 7, 13, 0, 30, 2, 12])
-        elif model_name == 'MobileNetV2':
-            ranking = np.array([43, 54, 48, 8, 19, 56, 42, 0, 25, 12])
+        if os.path.exists(ranked_indices):
+            ranking = np.load(ranked_indices)
         else:
+            if model_name == 'resnet18':
+                ranking = np.array([48, 54, 0, 14, 7, 49, 56, 30, 42, 32])
+            elif model_name == 'resnet50':
+                ranking = np.array([14, 43, 54, 48, 7, 13, 0, 30, 2, 12])
+            elif model_name == 'MobileNetV2':
+                ranking = np.array([43, 54, 48, 8, 19, 56, 42, 0, 25, 12])
             ranking = ranking_OMP(model_name, aug_name, 10)
+            np.save(ranked_indices, ranking)
         print("OMP RANKING: ", ranking) 
     elif ranking_name == 'LR':
         ranking = ranking_LR(model_name, aug_name, 10)
@@ -171,9 +175,10 @@ def ranking_OMP(model_name, aug_name, n_augs):
 def img_ranking_OMP(augmentations, targets, n_augs):
     # Given a set of augmentations and target, return 
     # ordered list of augmentations 
+    n_targets = len(targets)
     ohe = OneHotEncoder(sparse=False).fit(np.arange(1000).reshape(1,-1).T)
-    ohe_targets = ohe.transform(targets.reshape(1, -1).T).reshape((1200000, -1))
-    augmentations = np.swapaxes(augmentations, 1, 2).reshape((1200000, -1))
+    ohe_targets = ohe.transform(targets.reshape(1, -1).T).reshape((n_targets*1000, -1))
+    augmentations = np.swapaxes(augmentations, 1, 2).reshape((n_targets*1000, -1))
     ordered_augs = []
     
     for i in range(n_augs):

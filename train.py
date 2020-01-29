@@ -2,7 +2,7 @@ import os
 import sys
 import ssl
 import pdb
-
+import numpy as np
 import ttach as tta
 from models import get_pretrained_model
 from dataloaders import get_imnet_dataloader
@@ -51,7 +51,6 @@ print("[X] Model loaded!")
 # Generate validation outputs
 # TODO: Move imnet dataloader to be within function for model_name; cleaner train.py file,  
 output_file = val_output_dir + "/" + model_name + ".h5"
-pdb.set_trace()
 if not check_if_finished(output_file): 
     dataloader = get_imnet_dataloader(val_dir, batch_size=2) 
     write_augmentation_outputs(tta_model, dataloader, output_file)
