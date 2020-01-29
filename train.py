@@ -14,9 +14,10 @@ import pdb
 import ttach as tta
 from models import get_pretrained_model
 from dataloaders import get_imnet_dataloader
-from augmentations import write_augmentation_outputs, write_aug_list, get_single_aug_idxs
-from evaluate import write_aggregation_outputs
+from augmentations import write_augmentation_outputs, write_aug_list 
+from evaluate import evaluate_aggregation_outputs
 from ranking import write_ranking_outputs, train_ranked_lrs, evaluate_ranking
+from threshold import evaluate_threshold
 from utils.gpu_utils import restrict_GPU_pytorch
 from utils.tta_utils import check_if_finished
 
@@ -44,9 +45,9 @@ tta_model.to('cuda:0')
 print("[X] Model loaded!")
 
 # Generate validation outputs
+# TODO: Move imnet dataloader to be within function for model_name; cleaner train.py file,  
 output_file = val_output_dir + "/" + model_name + ".h5"
 if not check_if_finished(output_file): 
-    # write out testaugmented outputs on val data
     dataloader = get_imnet_dataloader(val_dir, batch_size=4) 
     write_augmentation_outputs(tta_model, dataloader, output_file)
 print("[X] Val outputs written!")
@@ -71,11 +72,12 @@ for rank_name in rank_names:
         print("[X] Ranking outputs written!")
         print("[X] Ranked logistic regressions trained!")
 
+# Evaluating each step of the method 
 evaluate_ranking(model_name)
 print("[X] Ranking outputs evaluated!")
 
 evaluate_aggregation_outputs(model_name)
 print("[X] Aggregated outputs written + evaluated!")
 
-evaluate_thresholding(model_name)
+evaluate_threshold(model_name)
 print("[X] Thresholding evaluated!")

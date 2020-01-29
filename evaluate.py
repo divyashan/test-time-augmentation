@@ -9,8 +9,8 @@ import pandas as pd
 from tqdm import tqdm 
 from augmentations import get_aug_idxs
 from aggregation import get_agg_f
-from imagenet_utils import accuracy
-from gpu_utils import restrict_GPU_pytorch
+from utils.imagenet_utils import accuracy
+from utils.gpu_utils import restrict_GPU_pytorch
 # Take in indices of diff augmentations
 class ModelOutputs():
     def __init__(self, model_name, aug_name):
@@ -47,7 +47,6 @@ class ModelOutputs():
                     agg_outputs = torch.Tensor(agg_outputs)
                     labels = torch.Tensor(labels)
                     scores= accuracy(agg_outputs, labels, topk=(1,5))
-                    print(len(agg_outputs))
                     top1s.append(scores[0].item())
                     top5s.append(scores[1].item())
         return np.mean(top1s), np.mean(top5s)
@@ -73,7 +72,7 @@ def evaluate(model_name, aug_name, agg_name):
     score = mo.apply(agg_name)
     return score
 
-def write_aggregation_outputs(model_name):
+def evaluate_aggregation_outputs(model_name):
     aug_names = ['hflip', 'orig','five_crop', 'colorjitter', 'rotation', 'combo']
     agg_names = ['mean', 'partial_lr', 'full_lr', 'max'] 
     

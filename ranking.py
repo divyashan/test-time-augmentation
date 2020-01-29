@@ -1,15 +1,18 @@
 import os
 import pdb
+import sys
 import h5py
 import torch
 import numpy as np
+import pandas as pd
+from tqdm import tqdm
 
 from tta_train import train_tta_lr
 from augmentations import get_aug_idxs
 from utils.tta_utils import check_if_finished
+from utils.imagenet_utils import accuracy
 from tta_agg_models import TTARegression, TTAPartialRegression 
 
-from tqdm import tqdm
 from pyomp.omp import omp
 import rankaggregation as ra
 from sklearn.linear_model import orthogonal_mp 
@@ -46,6 +49,8 @@ def write_ranking_outputs(model_name, aug_name, ranking_name):
             ranking = np.array([48, 54, 0, 14, 7, 49, 56, 30, 42, 32])
         elif model_name == 'resnet50':
             ranking = np.array([14, 43, 54, 48, 7, 13, 0, 30, 2, 12])
+        elif model_name == 'MobileNetV2':
+            ranking = np.array([43, 54, 48, 8, 19, 56, 42, 0, 25, 12])
         else:
             ranking = ranking_OMP(model_name, aug_name, 10)
         print("OMP RANKING: ", ranking) 
@@ -123,27 +128,26 @@ def evaluate_ranking(model_name):
     pd.DataFrame(results).to_csv('./results/' + model_name + '_ranking_fs')
 
 def evaluate_ranking_aug_rank(model_name, aug_name, rank_name):
-    ranking_outputs_file = './ranking_outputs/val/' + model_name + '/' + ranking_name + '/' + aug_name + '.h5'
+    ranking_outputs_file = './ranking_outputs/val/' + model_name + '/' + rank_name + '/' + aug_name + '.h5'
     model_save_path = './agg_models/ranking/' + aug_name + '/' + rank_name + '/' + model_name + '/'
     top1s = [[] for i in range(10)]
     top5s = [[] for i in range(10)]
-    models = [TTAPartialRegression(i+1,1000,'even') for i in range(10)]
-    models = [model.load_state_dict(torch.load(model_save_path + str(i) + '.pth')) for model in models]
+    models = [torch.load(model_save_path + str(i) + '.pth') for i in range(10)]
     with torch.no_grad():
         with h5py.File(ranking_outputs_file, 'r') as hf:
-            for key in hf.keys():
+            for key in tqdm(hf.keys()):
                 if 'labels' in key:
                     continue
                 for i in range(10):
                     model = models[i]
-                    outputs = hf[key][:i+1].value
-                    labels = hf[key[:-7] + '_labels'].value
-                    
+                    outputs = hf[key][:i+1]
+                    labels = hf[key[:-7] + '_labels']
+                                    
                     outputs = np.swapaxes(outputs, 0, 1)
-                    outputs = torch.Tensor(outputs)
+                    outputs = torch.Tensor(outputs).cuda()
                     agg_outputs = model(outputs)
-                    labels = torch.Tensor(labels)
-                    score = accuracy(agg_outputs, labels)
+                    labels = torch.Tensor(labels).cuda()
+                    score = accuracy(agg_outputs, labels, topk=(1,5))
                     top1s[i].append(score[0].item())
                     top5s[i].append(score[1].item())
     return [np.mean(rank) for rank in top1s], [np.mean(rank) for rank in top5s]
@@ -203,3 +207,5 @@ def combine_rankings(rankings, n_augs):
     ranks = [x[0] for x in sorted(ranked_augs, key=lambda x: x[1])]
     return ranks[:n_augs]
 
+if __name__=='__main__':
+    evaluate_ranking(sys.argv[1])
