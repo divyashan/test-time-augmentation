@@ -1,6 +1,6 @@
 import os
 import h5py
-import torch
+#import torch
 import numpy as np
 from tqdm import tqdm 
 from aug_cartesian_product import AUG_ORDER, AUG_CART_PRODUCT

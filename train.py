@@ -1,11 +1,3 @@
-#If pretrained model doesn't exist, load it - in future iterations, we would be training new models
-# If outputs on validation data don't exist, produce them
-#   To do this, we want to produce all possible permutations of augmentations. This can be done using the ttach package. The augmentations we will consider are the fivecrops, horizontal flips, color jitter, brightness and scaling. This will produce some number of augmentations - not sure 
-# If outputs on training data don't exist, produce them
-#   Same methodology as above, a million years longer.
-# If tta_learn baselines don't exist, produce them + write out test predictions 
-# If tta_learn models don't exist, produce them + write out test predictions
-# save tta_learn models
 import os
 import sys
 import ssl
@@ -32,10 +24,8 @@ val_output_dir = "./outputs/model_outputs/val"
 ranking_output_dir = "./outputs/ranking_outputs"
 aggregated_outputs_dir = "./outputs/aggregated_outputs/"
 
-tta_functions = tta.base.Compose([tta.transforms.FiveCrops(224, 224), tta.transforms.HorizontalFlip(), 
+tta_functions = tta.base.Compose([ tta.transforms.FiveCrops(224, 224), tta.transforms.HorizontalFlip(), 
                                   tta.transforms.ColorJitter(), tta.transforms.Rot([2,3])])
-#tta_functions = tta.base.Compose([tta.transforms.FiveCrops(224, 224), tta.transforms.HorizontalFlip(), 
-#                                  tta.transforms.ColorJitter()])
 
 # Set up directories
 if not os.path.exists(train_output_dir):
@@ -43,7 +33,7 @@ if not os.path.exists(train_output_dir):
 if not os.path.exists(val_output_dir):
     os.makedirs(val_output_dir)
 if not os.path.exists(ranking_output_dir):
-    os.makedirs(val_output_dir)
+    os.makedirs(ranking_output_dir)
 if not os.path.exists(aggregated_outputs_dir):
     os.makedirs(aggregated_outputs_dir)
 
@@ -51,13 +41,19 @@ model_name = sys.argv[1]
 model = get_pretrained_model(model_name)
 tta_model = tta.ClassificationTTAWrapperOutput(model, tta_functions, ret_all=True)
 tta_model.to('cuda:0')
+
+aug_order = ['five_crop', 'hflip', 'colorjitter', 'rotation']
+aug_list = write_aug_list(tta_model.transforms.aug_transform_parameters,aug_order)
+np.save('./aug_list', aug_list)
+np.save('./aug_order', aug_order)
 print("[X] Model loaded!")
 
 # Generate validation outputs
 # TODO: Move imnet dataloader to be within function for model_name; cleaner train.py file,  
 output_file = val_output_dir + "/" + model_name + ".h5"
+pdb.set_trace()
 if not check_if_finished(output_file): 
-    dataloader = get_imnet_dataloader(val_dir, batch_size=4) 
+    dataloader = get_imnet_dataloader(val_dir, batch_size=2) 
     write_augmentation_outputs(tta_model, dataloader, output_file)
 print("[X] Val outputs written!")
 
@@ -65,7 +61,7 @@ print("[X] Val outputs written!")
 output_file = train_output_dir + "/" + model_name + ".h5"
 if not check_if_finished(output_file): 
     # write out testaugmented outputs on train data
-    dataloader = get_imnet_dataloader(train_dir) 
+    dataloader = get_imnet_dataloader(train_dir, batch_size=4) 
     write_augmentation_outputs(tta_model, dataloader, output_file)
 print("[X] Train outputs written!")
 
