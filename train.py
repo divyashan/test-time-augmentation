@@ -37,7 +37,16 @@ tta_functions = tta.base.Compose([tta.transforms.FiveCrops(224, 224), tta.transf
 #tta_functions = tta.base.Compose([tta.transforms.FiveCrops(224, 224), tta.transforms.HorizontalFlip(), 
 #                                  tta.transforms.ColorJitter()])
 
-#model_name = config['model_name']
+# Set up directories
+if not os.path.exists(train_output_dir):
+    os.makedirs(train_output_dir)
+if not os.path.exists(val_output_dir):
+    os.makedirs(val_output_dir)
+if not os.path.exists(ranking_output_dir):
+    os.makedirs(val_output_dir)
+if not os.path.exists(aggregated_outputs_dir):
+    os.makedirs(aggregated_outputs_dir)
+
 model_name = sys.argv[1] 
 model = get_pretrained_model(model_name)
 tta_model = tta.ClassificationTTAWrapperOutput(model, tta_functions, ret_all=True)
