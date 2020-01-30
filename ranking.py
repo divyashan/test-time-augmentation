@@ -26,7 +26,7 @@ def write_ranking_outputs(model_name, aug_name, ranking_name):
     outputs_file_val = './outputs/model_outputs/val/' + model_name + '.h5'
     ranking_outputs_path_train = './ranking_outputs/train/' + model_name + '/' + ranking_name + '/'
     ranking_outputs_path_val = './ranking_outputs/val/' + model_name + '/' + ranking_name + '/'
-    ranked_idices = './top_ten_augs/' + model_name + '.txt'
+    ranked_indices = './top_ten_augs/' + model_name + '.txt'
     outputs_files = [outputs_file_train, outputs_file_val]
     ranking_outputs_paths = [ranking_outputs_path_train, ranking_outputs_path_val]
 
@@ -198,8 +198,8 @@ def ranking_LR(model_name, aug_name, n_augs):
         model.load_state_dict(torch.load(model_path))
     else:
         print("[ ] Training LR model")
-        model = train_tta_lr(model_name, aug_name, 5) 
-    coeffs = model.coeffs.detach().numpy()
+        model = train_tta_lr(model_name, aug_name, 5, 'full') 
+    coeffs = model.coeffs.cpu().numpy()
     augmentation_coeffs = np.sum(coeffs, axis=1)
     rankings = np.flip(np.argsort(augmentation_coeffs))
     return rankings[:n_augs]

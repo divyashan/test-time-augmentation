@@ -22,6 +22,7 @@ val_dir = "/data/ddmg/neuro/datasets/ILSVRC2012/val"
 train_output_dir = "./outputs/model_outputs/train"
 val_output_dir = "./outputs/model_outputs/val"
 ranking_output_dir = "./outputs/ranking_outputs"
+ranked_indices_output_dir = "./top_ten_augs"
 aggregated_outputs_dir = "./outputs/aggregated_outputs/"
 
 tta_functions = tta.base.Compose([ tta.transforms.FiveCrops(224, 224), tta.transforms.HorizontalFlip(), 
@@ -36,6 +37,8 @@ if not os.path.exists(ranking_output_dir):
     os.makedirs(ranking_output_dir)
 if not os.path.exists(aggregated_outputs_dir):
     os.makedirs(aggregated_outputs_dir)
+if not os.path.exists(ranked_indices_output_dir):
+    os.makedirs(ranked_indices_output_dir)
 
 model_name = sys.argv[1] 
 model = get_pretrained_model(model_name)
