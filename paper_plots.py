@@ -3,6 +3,8 @@ import torch
 import matplotlib.pyplot as plt
 import sys
 import csv
+from tta_agg_models import TTARegression, TTAPartialRegression
+import numpy as np
 
 MODEL_NAMES = {"MobileNetV2": "MobileNetV2", "resnet18": "ResNet-18", "resnet50": "ResNet-50", "resnet101": "ResNet-101"}
 
@@ -66,10 +68,43 @@ def generate_tta_accuracy_vs_angle_data(model_name):
             total += labels.shape[0]
         
         accuracy = acc/total
-        print(accuracy)
         accuracies.append(accuracy)
     
     return angles[1:-1], accuracies
+
+def generate_lr_tta_acc_vs_angle_data(model_name):
+    f = h5py.File('outputs/model_outputs/val/{}.h5'.format(model_name), 'r')
+
+    keys = list(f.keys())
+    accuracies = []
+    angles = [i for i in range(-14, 15)]
+
+    for i in range(len(angles)):
+        acc = 0.
+        total = 0.
+        model_path = '/data/ddmg/neuro/datasets/ILSVRC2012/robustness/robustness/{}/partial_lr/{}.pth'.format(model_name, i)
+        model = TTARegression(3, 1000,'even')
+        model.load_state_dict(torch.load(model_path))
+        model.eval()
+        for key in keys:
+            if "labels" in key:
+                continue
+            model_outputs = f[key][i:i+3]
+            model_outputs = np.swapaxes(model_outputs, 0, 1)
+            model_outputs = torch.Tensor(model_outputs)
+            tta_model_outputs = model(model_outputs)
+            
+            labels_key = get_labels_key(key)
+            labels = torch.Tensor(f[labels_key])
+            predicted_labels = torch.argmax(tta_model_outputs, dim=1).float()
+            results = torch.sum(labels == predicted_labels)
+            acc += float(results)
+            total += labels.shape[0]
+        accuracy = acc/total
+        print(accuracy)
+        accuracies.append(accuracy)
+
+    return angles, accuracies
 
 def graph_tta_accuracy_vs_angle(all_angles, all_acc, all_tta_angles, all_tta_acc, model_names):
     
@@ -103,6 +138,20 @@ def graph_tta_accuracy_vs_angle(all_angles, all_acc, all_tta_angles, all_tta_acc
 
 
 if __name__ == "__main__":
+
+    models = ["resnet18"]
+    data = []
+    for model_name in models:
+        angles, accuracies = generate_lr_tta_acc_vs_angle_data(model_name)
+        data.append({"Angles": angles, "Model Name": model_name, "Accuracies": accuracies})
+
+    csvfile = "rot_tta_2.csv"
+    with open(csvfile, 'w') as csvfile:
+        dict_writer = csv.DictWriter(csvfile, data[0].keys())
+        dict_writer.writeheader()
+        dict_writer.writerows(data)
+
+"""
      all_angles = []
      all_acc = []
      all_tta_angles = []
@@ -126,6 +175,7 @@ if __name__ == "__main__":
          dict_writer.writeheader()
          dict_writer.writerows(data)
      graph_tta_accuracy_vs_angle(all_angles, all_acc, all_tta_angles, all_tta_acc, model_names)
+"""
 
      
 
