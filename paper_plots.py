@@ -83,7 +83,7 @@ def generate_lr_tta_acc_vs_angle_data(model_name):
         acc = 0.
         total = 0.
         model_path = '/data/ddmg/neuro/datasets/ILSVRC2012/robustness/robustness/{}/partial_lr/{}.pth'.format(model_name, i)
-        model = TTARegression(3, 1000,'even')
+        model = TTAPartialRegression(3, 1000,'even')
         model.load_state_dict(torch.load(model_path))
         model.eval()
         for key in keys:
