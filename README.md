@@ -1,5 +1,6 @@
 #tta_learn_icml
-First, replace 'valdir' and 'traindir' variables in setup.py to a local version of ImageNet.
+
+Run the following instructions after replacing variables 'valdir' and 'traindir' variables in setup.py to a local version of ImageNet.
 
 `python setup.py`
 
