@@ -1,6 +1,8 @@
-#tta_learn_icml
+# ICML 2020 Code Submission
 
-Run the following instructions after replacing variables 'valdir' and 'traindir' variables in setup.py to a local version of ImageNet.
+Reproduce the experiments from Paper #6112 with the following instructions. 
+
+Replace variables 'valdir' and 'traindir' variables in setup.py to a local version of ImageNet.
 
 `python setup.py`
 
