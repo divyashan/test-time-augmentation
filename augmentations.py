@@ -1,6 +1,6 @@
 import os
 import h5py
-import torch
+#import torch
 import numpy as np
 from tqdm import tqdm 
 from aug_cartesian_product import AUG_ORDER, AUG_CART_PRODUCT
@@ -94,6 +94,9 @@ def get_single_aug_idxs(aug_name):
 def get_original_idxs():
     return np.where(np.sum(AUG_CART_PRODUCT, axis=1) == 0)[0]
 
+def get_hflipcrop_idxs():
+    hflip_idxs = get_single_aug_idxs('hflip')
+    crop_idxs = get_single_aug_idxs('five_crop')
 def get_all_idxs():
     return np.arange(len(AUG_CART_PRODUCT))
 

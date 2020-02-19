@@ -27,10 +27,10 @@ class ModelOutputs():
         if not os.path.exists(self.agg_outputs_folder):
             os.makedirs(self.agg_outputs_folder)
                 
-    def apply(self, agg_name):
+    def apply(self, agg_name, n_runs=5):
         agg_f = get_agg_f(self.aug_name, agg_name, self.model_name)
         agg_outputs_path = self.agg_outputs_folder + '/' + agg_name + '_test.h5'
-        top1s, top5s = [], []
+        top1_runs, top5_runs = [[] for i in range(n_runs)], [[] for i in range(n_runs)]
         with h5py.File(agg_outputs_path) as hf_agg:
             with h5py.File(self.val_outputs_path) as hf:
                 # Pre-computed aggregated outputs
@@ -46,10 +46,15 @@ class ModelOutputs():
                         hf_agg.create_dataset(key_pre + '_labels', data=labels)
                     agg_outputs = torch.Tensor(agg_outputs)
                     labels = torch.Tensor(labels)
-                    scores= accuracy(agg_outputs, labels, topk=(1,5))
-                    top1s.append(scores[0].item())
-                    top5s.append(scores[1].item())
-        return np.mean(top1s), np.mean(top5s)
+                    n_inputs = len(labels)
+                    for i in range(n_runs):
+                        idxs = np.random.choice(n_inputs, int(.8*n_inputs), replace=False)
+                        scores= accuracy(agg_outputs[idxs], labels[idxs], topk=(1,5))
+                        top1_runs[i].append(scores[0].item())
+                        top5_runs[i].append(scores[1].item())
+        top1s = [np.mean(x) for x in top1_runs]
+        top5s = [np.mean(x) for x in top5_runs]
+        return top1s, top5s 
 
     def batch_apply(self, agg_f, outputs, labels):
         with torch.no_grad():
@@ -75,7 +80,7 @@ def evaluate(model_name, aug_name, agg_name):
 def evaluate_aggregation_outputs(model_name):
     aug_names = ['hflip', 'orig','five_crop', 'colorjitter', 'rotation', 'combo']
     agg_names = ['mean', 'partial_lr', 'full_lr', 'max'] 
-    
+    n_runs = 5 
     results = []
     for aug_name in aug_names:
         for agg_name in agg_names:
@@ -84,11 +89,19 @@ def evaluate_aggregation_outputs(model_name):
                 continue
             mo = ModelOutputs(model_name, aug_name)
             # Combines + scores these model outputs
-            top1, top5 = mo.apply(agg_name)
-            results.append({'model':model_name, 'aug':aug_name, 'agg':agg_name, 'top1':top1, 'top5':top5})
+            top1s, top5s = mo.apply(agg_name)
+            for i in range(n_runs):
+                results.append({'model':model_name, 'aug':aug_name, 'agg':agg_name, 
+                                'top1':top1s[i], 'top5':top5s[i], 'run': i})
             pd.DataFrame(results).to_csv('./results/' + model_name + '_agg_fs')
 
 if __name__ == '__main__':
-    model_name = sys.argv[1]
-    write_aggregation_outputs(sys.argv[1])
-    #print('Score: ', evaluate(model_name, 'five_crop', 'lr'))
+
+    if len(sys.argv) == 1:
+        model_names = ['resnet18', 'resnet50', 'resnet101', 'MobileNetV2']
+        for model_name in model_names:
+            evaluate_aggregation_outputs(model_name)
+    else:
+        model_name = sys.argv[1]
+        evaluate_aggregation_outputs(sys.argv[1])
+

@@ -19,7 +19,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 train_dir = "/data/ddmg/neuro/datasets/imagenet-first-100-of-each"
 val_dir = "/data/ddmg/neuro/datasets/ILSVRC2012/val"
-train_output_dir = "./outputs/model_outputs/train"
+train_output_dir = "./outputs/model_outputs/train100"
 val_output_dir = "./outputs/model_outputs/val"
 ranking_output_dir = "./outputs/ranking_outputs"
 ranked_indices_output_dir = "./top_ten_augs"
@@ -45,14 +45,14 @@ model = get_pretrained_model(model_name)
 tta_model = tta.ClassificationTTAWrapperOutput(model, tta_functions, ret_all=True)
 tta_model.to('cuda:0')
 
-aug_order = ['five_crop', 'hflip', 'colorjitter', 'rotation']
+#aug_order = ['five_crop', 'hflip', 'colorjitter', 'rotation']
+aug-order = ['rotation']
 aug_list = write_aug_list(tta_model.transforms.aug_transform_parameters,aug_order)
 np.save('./aug_list', aug_list)
 np.save('./aug_order', aug_order)
 print("[X] Model loaded!")
 
 # Generate validation outputs
-# TODO: Move imnet dataloader to be within function for model_name; cleaner train.py file,  
 output_file = val_output_dir + "/" + model_name + ".h5"
 if not check_if_finished(output_file): 
     dataloader = get_imnet_dataloader(val_dir, batch_size=2) 

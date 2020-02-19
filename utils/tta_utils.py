@@ -9,6 +9,10 @@ def check_if_finished(file_path):
         with h5py.File(file_path, 'r') as hf:
             if 'val' in file_path:
                 done = len(hf.keys()) == 248
+                if 'Efficient' in file_path:
+                    done = len(hf.keys()) == 294
             if 'train' in file_path:
                 done = len(hf.keys()) == 82
+                if 'Efficient' in file_path:
+                    done = len(hf.keys()) == 498
     return done
