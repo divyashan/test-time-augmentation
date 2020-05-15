@@ -122,7 +122,7 @@ def main():
         scheduler.step()
 
     if args.save_model:
-        torch.save(model.state_dict(), "./saved_models/mnist/mnist_cnn.pt")
+        torch.save(model.state_dict(), "./saved_models/mnist/mnist_cnn.pth")
 
 
 if __name__ == '__main__':

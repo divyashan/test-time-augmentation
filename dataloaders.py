@@ -46,7 +46,7 @@ def get_mnist_dataloader(train, augment, batch_size=32):
                            transforms.Normalize((0.1307,), (0.3081,))
                        ])),
                        batch_size=batch_size, shuffle=False)
-    return 
+    return  dataloader
     
 def get_flowers_dataloader(train, augment, batch_size=32):
     image_size = 256

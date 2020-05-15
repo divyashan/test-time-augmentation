@@ -13,7 +13,7 @@ def write_aug_list(aug_transform_parameters, aug_order):
         pos  = str(param.func).split('_')[1][:2]
         return pos_map[pos] 
 
-    def parse_hflip(param):
+    def parse_flip(param):
         return int(param)
 
     def parse_color_jitter(param):
@@ -37,8 +37,8 @@ def write_aug_list(aug_transform_parameters, aug_order):
                           'CropBilinear':190, 'Sharpness':120}
         return name_base_dict[param_name] + int(param_level)
     parse_fs_dict = {'five_crop': parse_five_crop, 'rotation': parse_rotation,
-                'colorjitter': parse_color_jitter, 'hflip': parse_hflip, 'scale': parse_scale, 
-                'modified_five_crop': parse_modified_five_crop, 'pil': parse_pil}
+                'colorjitter': parse_color_jitter, 'hflip': parse_flip, 'scale': parse_scale, 
+                'modified_five_crop': parse_modified_five_crop, 'pil': parse_pil, 'vflip': parse_flip}
 
     parsed_params = []
     parse_fs = [parse_fs_dict[aug] for aug in aug_order]
