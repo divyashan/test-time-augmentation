@@ -21,7 +21,7 @@ model_name = sys.argv[3]
 gpu_arg = sys.argv[4]
 aug_order = ['pil']
 #aug_order = ['hflip', 'five_crop', 'scale']
-aug_order = ['hflip', 'vflip']
+aug_order = ['hflip', 'vflip', 'scale']
 
 parts = sys.argv[5]
 gen_val_outputs = True if parts[0] == '1' else False
@@ -37,13 +37,6 @@ xx = setup(dataset, n_classes, model_name, aug_order)
 import expmt_vars
 from expmt_vars  import batch_size, train_dir, val_dir, train_output_dir, val_output_dir
 from expmt_vars import aggregated_outputs_dir, aug_order, tta_policy
-from models import get_pretrained_model
-from dataloaders import get_dataloader
-from augmentations import write_augmentation_outputs
-from evaluate import evaluate_aggregation_outputs
-from threshold import evaluate_threshold
-# read out experiment variables
-
 tta_functions = get_tta_functions_from_aug_order(aug_order, dataset)
 model = get_pretrained_model(model_name, dataset)
 tta_model = tta.ClassificationTTAWrapperOutput(model, tta_functions, ret_all=True)
@@ -52,6 +45,12 @@ aug_list = write_aug_list(tta_model.transforms.aug_transform_parameters,aug_orde
 np.save('./' + dataset + '/' + tta_policy + '/aug_list.npy', aug_list)
 np.save('./' + dataset + '/' + tta_policy + '/aug_order.npy', aug_order)
 print("[X] Model loaded!")
+
+from models import get_pretrained_model
+from dataloaders import get_dataloader
+from augmentations import write_augmentation_outputs
+from evaluate import evaluate_aggregation_outputs
+from threshold import evaluate_threshold
 
 # Generate validation outputs
 if gen_val_outputs:
