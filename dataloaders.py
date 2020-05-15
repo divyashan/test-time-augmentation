@@ -34,7 +34,20 @@ def get_dataloader(dataset, datadir, bs, augment=False):
         if 'val' in datadir:
             return get_birds_dataloader(train=False, augment=augment,batch_size=bs)
         return get_birds_dataloader(train=True, augment=augment, batch_size=bs)
+    elif dataset == 'mnist':
+        if 'val' in datadir:
+            return get_mnist_dataloader(train=False, augment=augment, batch_size=bs)
+        return get_mnist_dataloader(train=True, augment=augment, batch_size=bs)
 
+def get_mnist_dataloader(train, augment, batch_size=32):
+    dataloader = torch.utils.data.DataLoader(
+        datasets.MNIST('../data', train=train, transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.1307,), (0.3081,))
+                       ])),
+                       batch_size=batch_size, shuffle=False)
+    return 
+    
 def get_flowers_dataloader(train, augment, batch_size=32):
     image_size = 256
     crop_size = 224

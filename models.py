@@ -11,6 +11,7 @@ import torch
 import torchvision.models as models
 from expmt_vars import n_classes
 from cnn_finetune import make_model
+from mnist_train import Net
 
 MAX_MODEL_BATCH_SIZE = {'resnet': 128, 'alexnet': 128, 'vgg16':128, 'FixResNext101_32x48d_w_train_aug':16, 'FixResNext101_32x48d':16, 'ResNext101_32x48d':16, 'ResNext101_32x16d': 32, 'ResNext101_32x32d': 32, 'EfficientNetB0': 128, 'EfficientNetB1': 64, 'EfficientNetB2': 32, 'EfficientNetB3': 32, 'EfficientNetB4': 32, 'EfficientNetB5': 32, 'EfficientNetB6': 32, 'EfficientNetB7': 16, 'MobileNetV2': 128}
 
@@ -39,6 +40,11 @@ def get_resnext101_32x48d(weight_fname):
         return model
 
     return get_model
+
+def get_mnist_model():
+    model = Net()
+    model.load_state_dict(torch.load('./saved_models/mnist/mnist_cnn.pth'))
+    return model
 
 def get_flowers_model(model_name):
     m_name = model_name
@@ -111,6 +117,8 @@ def get_pretrained_model(model_name, dataset):
         return get_flowers_model(model_name)
     elif dataset == 'birds200':
         return get_birds_model(model_name)
+    elif dataset == 'mnist':
+        return get_mnist_model()
 
 def get_pretrained_model_imnet(model_name):
     model_f_dict = {}

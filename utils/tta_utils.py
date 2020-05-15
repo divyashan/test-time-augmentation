@@ -1,7 +1,6 @@
 import numpy as np
 import h5py
 import os
-import pdb
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import log_loss
 import torch
@@ -33,7 +32,6 @@ def split_val_outputs(file_path):
     with h5py.File(file_path) as hf:
         output_keys = [x for x in hf.keys() if 'inputs' in x]
         label_keys = [x[:-6] + 'labels' for x in output_keys]
-        pdb.set_trace()
         outputs = np.concatenate([hf[ok][:] for ok in output_keys], axis=1)
         labels = np.concatenate([hf[lk][:] for lk in label_keys])
         outputs = np.swapaxes(outputs, 0, 1)

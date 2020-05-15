@@ -2,10 +2,8 @@ import os
 import sys
 import numpy as np
 import ttach as tta
-from models import get_pretrained_model
 sys.path.insert(0, './')
 
-from utils.aug_utils import write_aug_list
 from utils.gpu_utils import restrict_GPU_pytorch
 import pdb
 import pickle
@@ -16,9 +14,10 @@ def get_tta_functions_from_aug_order(aug_order, dataset):
         tta_functions = tta.base.Compose([ tta.transforms.AllPIL(crop_size, dataset)])
         return tta_functions
     transform_map = {'hflip': tta.transforms.HorizontalFlip(),
-                             'five_crop': tta.transforms.FiveCrops(crop_size, crop_size),
-                             'scale': tta.transforms.Scale([1.04, 1.10]),
-                             'modified_five_crop': tta.transforms.ModifiedFiveCrops(crop_size, crop_size)}
+                     'vflip': tta.transforms.VerticalFlip(),        
+                     'five_crop': tta.transforms.FiveCrops(crop_size, crop_size),
+                     'scale': tta.transforms.Scale([1.04, 1.10]),
+                     'modified_five_crop': tta.transforms.ModifiedFiveCrops(crop_size, crop_size)}
     fns = [transform_map[x] for x in aug_order]
     tta_functions = tta.base.Compose(fns)
     return tta_functions
@@ -78,9 +77,4 @@ def setup(dataset, n_classes, model_name, aug_order):
     if not os.path.exists(results_dir + '/val'):
         os.makedirs(results_dir + '/val')
         os.makedirs(results_dir + '/train')
-    model = get_pretrained_model(model_name, dataset)
-    tta_model = tta.ClassificationTTAWrapperOutput(model, tta_functions, ret_all=True)
-    tta_model.to('cuda:0')
-    aug_list = write_aug_list(tta_model.transforms.aug_transform_parameters,aug_order)
-    np.save('./' + dataset + '/' + tta_policy + '/aug_list.npy', aug_list)
-    np.save('./' + dataset + '/' + tta_policy + '/aug_order.npy', aug_order)
+    return expmt_vars_dict
