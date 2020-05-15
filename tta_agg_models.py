@@ -8,6 +8,7 @@ import itertools
 
 import torch
 from torch import nn, optim
+from torch.nn.functional import softmax as torch_softmax
 from scipy.special import softmax
 from expmt_vars import n_classes
 

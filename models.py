@@ -41,9 +41,14 @@ def get_resnext101_32x48d(weight_fname):
 
     return get_model
 
-def get_mnist_model():
-    model = Net()
-    model.load_state_dict(torch.load('./saved_models/mnist/mnist_cnn.pth'))
+def get_mnist_model(model_name):
+    if 'mnist_cnn' in model_name:
+        model = Net()
+    elif model_name == 'mnist_1NN':
+        input_size = 784
+        hidden_size = 500
+        num_classes = 10
+    model.load_state_dict(torch.load('./saved_models/mnist/'+ model_name + '.pth'))
     return model
 
 def get_flowers_model(model_name):
@@ -118,7 +123,7 @@ def get_pretrained_model(model_name, dataset):
     elif dataset == 'birds200':
         return get_birds_model(model_name)
     elif dataset == 'mnist':
-        return get_mnist_model()
+        return get_mnist_model(model_name)
 
 def get_pretrained_model_imnet(model_name):
     model_f_dict = {}

@@ -6,7 +6,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
+from torch.utils.data.sampler import SubsetRandomSampler
+
 from utils.gpu_utils import restrict_GPU_pytorch
+import pdb
+import numpy as np
+
 restrict_GPU_pytorch('0')
 class Net(nn.Module):
     def __init__(self):
@@ -98,13 +103,18 @@ def main():
     device = torch.device("cuda" if use_cuda else "cpu")
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('../data', train=True, download=True,
+    pct = .05
+    dataset = datasets.MNIST('../data', train=True, download=True,
                        transform=transforms.Compose([
                            transforms.ToTensor(),
                            transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=args.batch_size, shuffle=True, **kwargs)
+                       ]))
+    n_examples = len(dataset)
+    subset_indices = np.random.choice(np.arange(n_examples), int(pct*n_examples), replace=False)   
+    np.random.shuffle(subset_indices)
+    train_loader = torch.utils.data.DataLoader(dataset,
+        batch_size=args.batch_size, shuffle=False, 
+        sampler=SubsetRandomSampler(subset_indices), **kwargs)
     test_loader = torch.utils.data.DataLoader(
         datasets.MNIST('../data', train=False, transform=transforms.Compose([
                            transforms.ToTensor(),

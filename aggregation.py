@@ -18,7 +18,7 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
     if agg_name == 'mean':
         return mean_agg_f(len(aug_idxs), n_classes)
     elif agg_name == 'full_lr':
-        n_epochs = 30
+        n_epochs = 30 
         model_path = agg_models_dir + '/'+model_name+'/'+aug_name + '/full_lr.pth'
         if not os.path.exists(model_path):
             print("[ ] Training LR model")

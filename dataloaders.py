@@ -39,12 +39,11 @@ def get_dataloader(dataset, datadir, bs, augment=False):
             return get_mnist_dataloader(train=False, augment=augment, batch_size=bs)
         return get_mnist_dataloader(train=True, augment=augment, batch_size=bs)
 
-def get_mnist_dataloader(train, augment, batch_size=32):
-    dataloader = torch.utils.data.DataLoader(
-        datasets.MNIST('../data', train=train, transform=transforms.Compose([
+def get_mnist_dataloader(train, augment, batch_size=32, pct=1): 
+    dataset = datasets.MNIST('../data', train=train, transform=transforms.Compose([
                            transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
+                           transforms.Normalize((0.1307,), (0.3081,))]))
+    dataloader = torch.utils.data.DataLoader(dataset,
                        batch_size=batch_size, shuffle=False)
     return  dataloader
     
