@@ -4,6 +4,8 @@ from . import functional as F
 from .base import DualTransform, ImageOnlyTransform
 
 from numpy import random
+from .augmentation_transforms_hpy import get_all_transform_fs 
+from .utils import pil_wrap_imgs, pil_unwrap_imgs
 import pdb
 
 class ColorJitter(DualTransform):
@@ -275,12 +277,68 @@ class FiveCrops(ImageOnlyTransform):
             partial(F.crop_lb, crop_h=crop_height, crop_w=crop_width),
             partial(F.crop_rb, crop_h=crop_height, crop_w=crop_width),
             partial(F.crop_rt, crop_h=crop_height, crop_w=crop_width),
-            partial(F.center_crop, crop_h=crop_height, crop_w=crop_width),
+            partial(F.crop_c, crop_h=crop_height, crop_w=crop_width),
         )
         super().__init__("crop_fn", crop_functions)
 
     def apply_aug_image(self, image, crop_fn=None, **kwargs):
         return crop_fn(image)
+
+    def apply_deaug_mask(self, mask, **kwargs):
+        raise ValueError("`FiveCrop` augmentation is not suitable for mask!")
+
+
+class ModifiedFiveCrops(ImageOnlyTransform):
+    """Makes 4 crops for each corner + center crop
+
+    Args:
+        crop_height (int): crop height in pixels
+        crop_width (int): crop width in pixels 
+    """
+
+    def __init__(self, crop_height, crop_width):
+        crop_functions = (
+            partial(F.crop_orig, crop_h=crop_height, crop_w=crop_width),
+            partial(F.crop_lt, crop_h=crop_height, crop_w=crop_width),
+            partial(F.crop_lb, crop_h=crop_height, crop_w=crop_width),
+            partial(F.crop_rb, crop_h=crop_height, crop_w=crop_width),
+            partial(F.crop_rt, crop_h=crop_height, crop_w=crop_width),
+            partial(F.crop_c, crop_h=crop_height, crop_w=crop_width),
+        )
+        super().__init__("crop_fn", crop_functions)
+
+    def apply_aug_image(self, image, crop_fn=None, **kwargs):
+        if crop_fn == None:
+            return image
+        return crop_fn(image)
+
+    def apply_deaug_mask(self, mask, **kwargs):
+        raise ValueError("`FiveCrop` augmentation is not suitable for mask!")
+
+
+class AllPIL(ImageOnlyTransform):
+    """Makes 4 crops for each corner + center crop
+
+    Args:
+        crop_height (int): crop height in pixels
+        crop_width (int): crop width in pixels 
+    """
+
+    def __init__(self, im_size, dataset):
+        all_functions = get_all_transform_fs(im_size) 
+        # Here we enumerate all of the partial functions that PIL offers...based on AutoAugment paper
+        super().__init__("aug_fn", all_functions)
+        self.crop_h= im_size
+        self.crop_w = im_size 
+        self.dataset = dataset
+    def apply_aug_image(self, image, aug_fn=None, **kwargs):
+        if aug_fn== None:
+            return image
+        image = F.center_crop(image, self.crop_h, self.crop_w)
+        images_pil = pil_wrap_imgs(image, self.dataset)
+        aug_images_pil = [aug_fn(x) for x in images_pil]
+        aug_images_tensor = pil_unwrap_imgs(aug_images_pil, self.dataset)
+        return aug_images_tensor 
 
     def apply_deaug_mask(self, mask, **kwargs):
         raise ValueError("`FiveCrop` augmentation is not suitable for mask!")

@@ -83,9 +83,10 @@ def scale(x, scale_factor, interpolation="nearest", align_corners=None):
     h, w = x.shape[2:]
     new_h = int(h * scale_factor)
     new_w = int(w * scale_factor)
-    return F.interpolate(
+    scaled_up =  F.interpolate(
         x, size=(new_h, new_w), mode=interpolation, align_corners=align_corners
     )
+    return center_crop(scaled_up, h, w)
 
 
 def resize(x, size, interpolation="nearest", align_corners=None):
@@ -100,26 +101,50 @@ def crop(x, x_min=None, x_max=None, y_min=None, y_max=None):
 
 def crop_lt(x, crop_h, crop_w):
     """crop left top corner"""
-    return x[:, :, 0:crop_h, 0:crop_w]
-
+    orig_h = x.shape[2]
+    orig_w = x.shape[3]
+    x = x[:, :, 0:crop_h, 0:crop_w]
+    return x
+    #return resize(x, (orig_h, orig_w))
 
 def crop_lb(x, crop_h, crop_w):
     """crop left bottom corner"""
-    return x[:, :, -crop_h:, 0:crop_w]
-
+    orig_h = x.shape[2]
+    orig_w = x.shape[3]
+    x = x[:, :, -crop_h:, 0:crop_w]
+    return x
+    #return resize(x, (orig_h, orig_w))
 
 def crop_rt(x, crop_h, crop_w):
     """crop right top corner"""
-    return x[:, :, 0:crop_h, -crop_w:]
-
+    orig_h = x.shape[2]
+    orig_w = x.shape[3]
+    x = x[:, :, 0:crop_h, -crop_w:]
+    return x
+    #return resize(x, (orig_h, orig_w))
 
 def crop_rb(x, crop_h, crop_w):
     """crop right bottom corner"""
-    return x[:, :, -crop_h:, -crop_w:]
+    orig_h = x.shape[2]
+    orig_w = x.shape[3]
+    x = x[:, :, -crop_h:, -crop_w:]
+    return x
+    #return resize(x, (orig_h, orig_w))
 
+def crop_c(x, crop_h, crop_w):
+    orig_h = x.shape[2]
+    orig_w = x.shape[3]
+    x = center_crop(x, crop_h, crop_w)
+    #return resize(x, (orig_h, orig_w))
+    return x
+
+def crop_orig(x, crop_h, crop_w):
+    return x
 
 def center_crop(x, crop_h, crop_w):
     """make center crop"""
+    orig_h = x.shape[2]
+    orig_w = x.shape[3]
 
     center_h = x.shape[2] // 2
     center_w = x.shape[3] // 2

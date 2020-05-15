@@ -13,7 +13,7 @@ from dataloaders import get_imnet_dataloader
 
 from tta_train import train_tta_lr
 from utils.gpu_utils import restrict_GPU_pytorch
-from setup import val_dir
+from expmt_vars import val_dir
 restrict_GPU_pytorch(sys.argv[1])
 
 dataloader = get_imnet_dataloader(val_dir, batch_size=1)

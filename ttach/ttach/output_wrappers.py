@@ -46,7 +46,8 @@ class ClassificationTTAWrapperOutput(nn.Module):
             augmented_images.append(augmented_image)
         augmented_images = torch.cat(augmented_images, axis=0)
         augmented_outputs = self.model(augmented_images,  *args)
-        augmented_outputs = augmented_outputs.view((-1, image.shape[0], 1000))
+        n_classes = augmented_outputs.shape[1]
+        augmented_outputs = augmented_outputs.view((-1, image.shape[0], n_classes))
         #if self.output_key is not None:
         #    augmented_outputs = augmented_outputs[self.output_key]
         # TODO: implement batch merge

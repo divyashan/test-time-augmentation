@@ -54,6 +54,7 @@ class ClassificationTTAWrapper(nn.Module):
         print("Took this long: ", start-end)
         if merger.type == 'mean' and not self.ret_all:
             return torch.mean(augmented_outputs, 0).unsqueeze(0)
+        pdb.set_trace()
         augmented_outputs = augmented_outputs.view((-1, image.shape[0], 1000))
         if self.output_key is not None:
             augmented_outputs = augmented_outputs[self.output_key]
