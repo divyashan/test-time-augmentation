@@ -30,7 +30,9 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
     model.cuda('cuda:0')
     criterion.cuda('cuda:0')
     model.train()
-    
+    lambda1 = .01 
+    params = torch.cat([x.view(-1) for x in model.parameters()])
+
     with h5py.File(datapath, 'r') as hf:
         for epoch in range(epochs):
             progress = ProgressMeter(len(hf.keys()),
@@ -46,7 +48,9 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
                 examples = examples.cuda('cuda:0', non_blocking=True)
                 target = target.cuda('cuda:0', non_blocking=True)
                 output = model(examples)
-                loss = criterion(output, target)
+                nll_loss = criterion(output, target)
+                l1_loss = lambda1 * torch.norm(params, 1)
+                loss = nll_loss  + l1_loss
                 acc1, acc5 = accuracy(output, target, topk=(1,5))
 
                 losses.update(loss.item(), examples.size(0))
@@ -66,7 +70,9 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
                     example_batch = example_batch.cuda('cuda:0', non_blocking=True)
                     target_batch = target_batch.cuda('cuda:0', non_blocking=True)
                     output = model(example_batch)
-                    loss = criterion(output, target_batch)
+                    nll_loss = criterion(output, target_batch)
+                    l1_loss = lambda1 * torch.norm(params, 1)
+                    loss = nll_loss + l1_loss
                     acc1, acc5 = accuracy(output, target_batch, topk=(1,5))
 
                     losses.update(loss.item(), examples.size(0))
@@ -76,7 +82,8 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()   
-                    
+                    for p in model.parameters():
+                        p.data.clamp_(0)                 
             progress.display(epoch)
         model_prefix = agg_models_dir + '/' + model_name + '/' + aug_name
         if not os.path.exists(model_prefix):

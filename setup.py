@@ -7,7 +7,15 @@ sys.path.insert(0, './')
 from utils.gpu_utils import restrict_GPU_pytorch
 import pdb
 import pickle
+import glob
 
+def remove_old_results(agg_model_dir, agg_outputs_dir):
+    files = glob.glob(agg_model_dir + '/*')
+    for f in files:
+        os.remove()
+    files = glob.glob(agg_outputs_dir + '/*')
+    for f in files:
+        os.remove()
 def get_tta_functions_from_aug_order(aug_order, dataset):
     crop_size = 224
     if aug_order[0] == 'pil':
@@ -15,6 +23,7 @@ def get_tta_functions_from_aug_order(aug_order, dataset):
         return tta_functions
     transform_map = {'hflip': tta.transforms.HorizontalFlip(),
                      'vflip': tta.transforms.VerticalFlip(),        
+                     'flips': tta.transforms.Flips(),
                      'five_crop': tta.transforms.FiveCrops(crop_size, crop_size),
                      'scale': tta.transforms.Scale([1.04, 1.10]),
                      'modified_five_crop': tta.transforms.ModifiedFiveCrops(crop_size, crop_size)}

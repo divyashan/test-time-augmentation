@@ -14,7 +14,7 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
     orig_idx = get_aug_idxs('orig')
     val_path = val_output_dir + '/' + model_name + '_val.h5'
     temp_scale = get_calibration(val_path, orig_idx)
-    temp_scale = 1
+    #temp_scale = 1
     if agg_name == 'mean':
         return mean_agg_f(len(aug_idxs), n_classes)
     elif agg_name == 'full_lr':
@@ -31,7 +31,7 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
         model.eval()
         return model
     elif agg_name == 'partial_lr':
-        n_epochs = 20 
+        n_epochs = 15 
         model_path = agg_models_dir + '/'+model_name+'/'+aug_name + '/partial_lr.pth'
         if not os.path.exists(model_path):
             print("[ ] Training LR model")
