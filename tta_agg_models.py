@@ -11,6 +11,43 @@ from torch import nn, optim
 from torch.nn.functional import softmax as torch_softmax
 from scipy.special import softmax
 from expmt_vars import n_classes
+from scipy.optimize import nnls
+
+class ImprovedLR(nn.Module):
+    def __init__(self, n_augs, n_classes, train_path, scale=1, partial_lr_init=None):
+        super().__init__()
+        self.temperature = scale
+        self.coeffs = np.zeros((n_augs, n_classes))
+        self.partial_lr = partial_lr_init
+        self.n_classes = n_classes
+        self.n_augs = n_augs
+        self.train_path = train_path
+
+    def fit(self, train_path):
+        # X is a n_augs x n_exampels x n_classes matrix
+        # y is a 1 x n_classes matrix
+        # Iterate over each augmentation
+        hf = h5py.File(train_path, 'r')
+        outputs = hf['batch1_inputs'][:]
+        labels = hf['batch1_labels'][:]
+        outputs = outputs / self.temperature
+        n_augs, n_examples, n_classes = outputs.shape
+        softmaxed = [np.expand_dims(softmax(aug_o, axis=1), axis=0) for aug_o in outputs]
+        outputs = np.concatenate(softmaxed, axis=0)
+        for i in range(self.n_classes):
+            class_outputs = outputs[:,:,i]
+            # now the input should be a n_augs x n_examples matrix, for class i
+            # construct labels as 1 for being that class, 0 if its not
+            class_labels = np.zeros(labels.shape)
+            class_labels[np.where(labels == i)[0]] = 1
+            weights, _ = nnls(class_outputs.T, class_labels)
+            self.coeffs[:,i] = weights 
+        self.coeffs = self.coeffs / np.sum(self.coeffs, axis=0) 
+
+    def forward(self, x):
+        x = x/self.temperature
+        mult = torch.Tensor(self.coeffs) * x
+        return mult.sum(axis=1) 
 
 class TTARegression(nn.Module):
     def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even'):

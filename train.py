@@ -9,12 +9,6 @@ from utils.gpu_utils import restrict_GPU_pytorch
 from utils.tta_utils import check_if_finished, split_val_outputs
 from utils.aug_utils import write_aug_list
 
-gen_val_outputs = True 
-split_val = True
-evaluate = True
-gen_train_outputs = False 
-threshold = False
-
 dataset = sys.argv[1]
 n_classes = int(sys.argv[2])
 model_name = sys.argv[3]

@@ -81,7 +81,8 @@ def evaluate_aggregation_outputs(model_name, dataset, mode='val'):
     # aug_names = ['hflip', 'orig','five_crop', 'colorjitter', 'rotation', 'combo']
     aug_names = ['orig', 'combo' ] + aug_order
     aug_names = ['orig', 'combo']
-    agg_names = ['mean', 'gps', 'partial_lr', 'full_lr', 'max'] 
+    aug_names = ['orig', 'combo']
+    agg_names = ['mean', 'gps', 'partial_lr', 'full_lr', 'improved_lr',  'max'] 
     n_runs = 5 
     results = []
     for aug_name in aug_names:
