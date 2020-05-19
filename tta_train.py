@@ -29,7 +29,7 @@ def train_improved_lr(n_augs, n_classes, train_path, coeffs, n_epochs=10, scale=
         # construct labels as 1 for being that class, 0 if its not
         plr = TTAPartialRegression(n_augs, 1, scale, initialization='even', coeffs=coeffs)
         for j in range(n_epochs):
-            loss, auc = train_epoch(plr, outputs, class_labels, i)
+            loss, auc = train_epoch_BCE(plr, outputs, class_labels, i)
             if j == 0:
                 orig_loss, orig_auc = loss, auc
         #weights, _ = nnls(class_outputs.T, class_labels)
@@ -39,10 +39,63 @@ def train_improved_lr(n_augs, n_classes, train_path, coeffs, n_epochs=10, scale=
     # TODO: save coeffs 
     return ilr
 
-def train_epoch(model, X, y, class_idx):
+def train_improved_lr_CE(n_augs, n_classes, train_path, orig_idx, n_epochs=10, scale=1):
+    ilr = ImprovedLR(n_augs, n_classes, scale)
+
+    hf = h5py.File(train_path, 'r')
+    outputs = hf['batch1_inputs'][:]
+    labels = hf['batch1_labels'][:]
+    n_augs, n_examples, n_classes = outputs.shape
+
+    for i in range(n_classes):
+        # class_idxs could also subselect for examples predicted to be class i 
+        class_idxs = np.where(labels == i)[0]
+        pred_idxs = np.where(np.argmax(outputs[orig_idx], axis=1) == i)[0]
+        idxs = np.array(list(set(np.concatenate([class_idxs, pred_idxs]))))
+        class_outputs = outputs[:,idxs,:]
+        class_labels = labels[idxs]
+        # now the input should be a n_augs x n_examples matrix, for class i
+        # construct labels as 1 for being that class, 0 if its not
+        plr = TTAPartialRegression(n_augs, n_classes, scale, initialization='even') 
+        for j in range(n_epochs):
+            loss, auc = train_epoch_CE(plr, class_outputs, class_labels)
+            if j == 0:
+                orig_loss, orig_auc = loss, auc
+        #weights, _ = nnls(class_outputs.T, class_labels)
+        ilr.coeffs[:,i] = plr.coeffs.detach().cpu().numpy()[:,0]
+        print(orig_loss - loss, orig_auc - auc)
+    ilr.coeffs = ilr.coeffs / np.sum(ilr.coeffs, axis=0)
+    # TODO: save coeffs 
+    return ilr
+
+def train_epoch_CE(model, X, y):
+    n_augs = len(X)
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=.01, momentum=.9, weight_decay=1e-4)
+    #model.cuda('cuda:0')
+    #criterion.cuda('cuda:0')
+    model.train()
+    params = torch.cat([x.view(-1) for x in model.parameters()])
+
+    X = np.swapaxes(X, 0, 1)
+    X = torch.Tensor(X)#.cuda('cuda:0', non_blocking=True)
+    y = torch.Tensor(y).long()#.cuda('cuda:0', non_blocking=True)
+    output = model(X)
+
+    #loss = criterion(class_outputs, y)
+    loss = criterion(output, y)
+    acc1, _ = accuracy(output, y, topk=(1, 5))
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    for p in model.parameters():
+        p.data.clamp_(0)
+    return loss.item(), acc1.item()
+
+def train_epoch_BCE(model, X, y, class_idx):
     n_augs = len(X)
     criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.9, weight_decay=1e-4)
+    optimizer = torch.optim.SGD(model.parameters(), lr=.01, momentum=.9, weight_decay=1e-4)
     #model.cuda('cuda:0')
     #criterion.cuda('cuda:0')
     model.train()

@@ -32,6 +32,7 @@ class TTARegression(nn.Module):
     def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even'):
         super().__init__()
         # To make "a" and "b" real parameters of the model, we need to wrap them with nn.Parameter
+        
         self.coeffs = nn.Parameter(torch.randn((n_augs, n_classes), requires_grad=True, dtype=torch.float))
         self.temperature = temp_scale
         if initialization == 'even':
