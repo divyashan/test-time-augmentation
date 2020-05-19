@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from augmentations import get_aug_idxs
 from tta_agg_models import TTARegression, TTAPartialRegression, GPS, ImprovedLR
-from tta_train import train_tta_lr 
+from tta_train import train_tta_lr, train_improved_lr 
 from expmt_vars import agg_models_dir, val_output_dir
 import pdb
 
@@ -18,15 +18,15 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
     if agg_name == 'mean':
         return mean_agg_f(len(aug_idxs), n_classes)
     elif agg_name == 'improved_lr':
+        # TODO: add laoding from saved coeffs
         model_path = agg_models_dir + '/'+model_name+'/'+aug_name + '/partial_lr.pth'
         model = TTAPartialRegression(len(aug_idxs),n_classes,temp_scale,'even')
         if os.path.exists(model_path):
             model.load_state_dict(torch.load(model_path))
-        coeffs = model.coeffs
-        model = ImprovedLR(len(aug_idxs), n_classes,temp_scale, partial_lr_init=coeffs)
-        # TOOD: Add loading from saved model
-        model.fit(val_path)
-        pdb.set_trace()
+        print("PARTIAL LR: ", model.coeffs)
+        coeffs = model.coeffs.detach().numpy()
+        n_epochs = 20
+        model = train_improved_lr(len(aug_idxs), n_classes,val_path, coeffs,20, temp_scale) 
         return model
     elif agg_name == 'full_lr':
         n_epochs = 30 
@@ -42,7 +42,7 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
         model.eval()
         return model
     elif agg_name == 'partial_lr':
-        n_epochs = 15 
+        n_epochs = 25 
         model_path = agg_models_dir + '/'+model_name+'/'+aug_name + '/partial_lr.pth'
         if not os.path.exists(model_path):
             print("[ ] Training LR model")

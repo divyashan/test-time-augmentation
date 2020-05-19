@@ -5,11 +5,73 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
-from tta_agg_models import TTARegression, TTAPartialRegression
+from tta_agg_models import TTARegression, TTAPartialRegression, ImprovedLR
 from utils.imagenet_utils import accuracy, AverageMeter, ProgressMeter
 from augmentations import get_aug_idxs
 from expmt_vars import val_output_dir, agg_models_dir
+from sklearn.metrics import log_loss, roc_auc_score
 
+def train_improved_lr(n_augs, n_classes, train_path, coeffs, n_epochs=10, scale=1):
+    ilr = ImprovedLR(n_augs, n_classes, scale)
+
+    hf = h5py.File(train_path, 'r')
+    outputs = hf['batch1_inputs'][:]
+    labels = hf['batch1_labels'][:]
+    n_augs, n_examples, n_classes = outputs.shape
+
+    for i in range(n_classes):
+        class_outputs = outputs[:,:,i]
+        class_outputs = np.expand_dims(class_outputs, 2)
+        class_labels = np.zeros(labels.shape)
+        class_labels[np.where(labels == i)[0]] = 1
+        
+        # now the input should be a n_augs x n_examples matrix, for class i
+        # construct labels as 1 for being that class, 0 if its not
+        plr = TTAPartialRegression(n_augs, 1, scale, initialization='even', coeffs=coeffs)
+        for j in range(n_epochs):
+            loss, auc = train_epoch(plr, outputs, class_labels, i)
+            if j == 0:
+                orig_loss, orig_auc = loss, auc
+        #weights, _ = nnls(class_outputs.T, class_labels)
+        ilr.coeffs[:,i] = plr.coeffs.detach().cpu().numpy()[:,0]
+        print(orig_loss - loss, orig_auc - auc)
+    ilr.coeffs = ilr.coeffs / np.sum(ilr.coeffs, axis=0)
+    # TODO: save coeffs 
+    return ilr
+
+def train_epoch(model, X, y, class_idx):
+    n_augs = len(X)
+    criterion = torch.nn.BCELoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.9, weight_decay=1e-4)
+    #model.cuda('cuda:0')
+    #criterion.cuda('cuda:0')
+    model.train()
+    params = torch.cat([x.view(-1) for x in model.parameters()])
+
+    X = np.swapaxes(X, 0, 1)
+    X = torch.Tensor(X)#.cuda('cuda:0', non_blocking=True)
+    y = torch.Tensor(y)#.cuda('cuda:0', non_blocking=True)
+    
+    output = model(X)
+    output = torch.softmax(output, axis=1)
+    class_outputs = output[:,class_idx]
+    
+    one_true = np.where(y == 1)[0]
+    one_preds = np.where(class_outputs > .5)[0]
+    #loss = criterion(class_outputs, y)
+    loss = criterion(class_outputs, y)
+    acc1, _ = accuracy(output, y, topk=(1, 5))
+    np_output = class_outputs.detach().numpy()
+    if len(one_preds): 
+        acc = len(set(one_preds).intersection(one_true)) / len(one_preds)
+    else:
+        acc = 0
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    for p in model.parameters():
+        p.data.clamp_(0)
+    return loss, roc_auc_score(y, np_output) 
 def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, temp_scale):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
@@ -50,7 +112,7 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
                 output = model(examples)
                 nll_loss = criterion(output, target)
                 l1_loss = lambda1 * torch.norm(params, 1)
-                loss = nll_loss  + l1_loss
+                loss = nll_loss  
                 acc1, acc5 = accuracy(output, target, topk=(1,5))
 
                 losses.update(loss.item(), examples.size(0))
@@ -72,7 +134,7 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
                     output = model(example_batch)
                     nll_loss = criterion(output, target_batch)
                     l1_loss = lambda1 * torch.norm(params, 1)
-                    loss = nll_loss + l1_loss
+                    loss = nll_loss 
                     acc1, acc5 = accuracy(output, target_batch, topk=(1,5))
 
                     losses.update(loss.item(), examples.size(0))
@@ -82,8 +144,8 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()   
-                    for p in model.parameters():
-                        p.data.clamp_(0)                 
+            for p in model.parameters():
+                p.data.clamp_(0)                 
             progress.display(epoch)
         model_prefix = agg_models_dir + '/' + model_name + '/' + aug_name
         if not os.path.exists(model_prefix):

@@ -79,7 +79,7 @@ if evaluate:
     if os.path.exists(agg_output_path):
         shutil.rmtree(agg_output_path)
     evaluate_aggregation_outputs(model_name, dataset, 'val')
-    evaluate_aggregation_outputs(model_name, dataset, 'train')
+    #evaluate_aggregation_outputs(model_name, dataset, 'train')
     print("[X] Aggregated outputs written + evaluated!")
 
 if threshold:

@@ -14,35 +14,14 @@ from expmt_vars import n_classes
 from scipy.optimize import nnls
 
 class ImprovedLR(nn.Module):
-    def __init__(self, n_augs, n_classes, train_path, scale=1, partial_lr_init=None):
+    def __init__(self, n_augs, n_classes, scale=1, partial_lr_init=None):
         super().__init__()
         self.temperature = scale
         self.coeffs = np.zeros((n_augs, n_classes))
         self.partial_lr = partial_lr_init
         self.n_classes = n_classes
         self.n_augs = n_augs
-        self.train_path = train_path
-
-    def fit(self, train_path):
-        # X is a n_augs x n_exampels x n_classes matrix
-        # y is a 1 x n_classes matrix
-        # Iterate over each augmentation
-        hf = h5py.File(train_path, 'r')
-        outputs = hf['batch1_inputs'][:]
-        labels = hf['batch1_labels'][:]
-        outputs = outputs / self.temperature
-        n_augs, n_examples, n_classes = outputs.shape
-        softmaxed = [np.expand_dims(softmax(aug_o, axis=1), axis=0) for aug_o in outputs]
-        outputs = np.concatenate(softmaxed, axis=0)
-        for i in range(self.n_classes):
-            class_outputs = outputs[:,:,i]
-            # now the input should be a n_augs x n_examples matrix, for class i
-            # construct labels as 1 for being that class, 0 if its not
-            class_labels = np.zeros(labels.shape)
-            class_labels[np.where(labels == i)[0]] = 1
-            weights, _ = nnls(class_outputs.T, class_labels)
-            self.coeffs[:,i] = weights 
-        self.coeffs = self.coeffs / np.sum(self.coeffs, axis=0) 
+        self.n_epochs = 20
 
     def forward(self, x):
         x = x/self.temperature
@@ -68,21 +47,24 @@ class TTARegression(nn.Module):
         return mult.sum(axis=1)
 
 class TTAPartialRegression(nn.Module):
-    def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even'):
+    def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even',coeffs=[]):
         super().__init__()
         # To make "a" and "b" real parameters of the model, we need to wrap them with nn.Parameter
         self.coeffs = nn.Parameter(torch.randn((n_augs,1 ), requires_grad=True, dtype=torch.float))
         self.temperature = temp_scale
-        if initialization == 'even':
-            self.coeffs.data.fill_(1.0/n_augs) 
-        elif initialization== 'original':
-            self.coeffs.data[0,:].fill_(1)
-            self.coeffs.data[1,:].fill_(0)
+        if len(coeffs):
+            self.coeffs = nn.Parameter(torch.Tensor(coeffs), requires_grad=True) 
+        else:
+            if initialization == 'even':
+                self.coeffs.data.fill_(1.0/n_augs) 
+            elif initialization== 'original':
+                self.coeffs.data[0,:].fill_(1)
+                self.coeffs.data[1,:].fill_(0)
              
     def forward(self, x):
         # Computes the outputs / predictions
         x = x/self.temperature
-        mult = torch.matmul(x.transpose(1, 2), self.coeffs)
+        mult = torch.matmul(x.transpose(1, 2), self.coeffs / torch.sum(self.coeffs, axis=0))
         return mult.squeeze()
 
 class GPS(nn.Module):
