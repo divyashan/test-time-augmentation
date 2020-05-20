@@ -93,6 +93,27 @@ class VerticalFlip(DualTransform):
 
     def apply_deaug_label(self, label, apply=False, **kwargs):
         return label
+    
+class Flips(DualTransform):
+    """Flip images vertically (up->down)"""
+
+    identity_param = False
+
+    def __init__(self):
+        super().__init__("apply_fn", [None, F.hflip, F.vflip])
+
+    def apply_aug_image(self, image, apply_fn=None, **kwargs):
+        if apply_fn:
+            image = apply_fn(image)
+        return image
+
+    def apply_deaug_mask(self, mask, apply=False, **kwargs):
+        if apply:
+            mask = F.vflip(mask)
+        return mask
+
+    def apply_deaug_label(self, label, apply=False, **kwargs):
+        return label
 
 
 class Rotate90(DualTransform):
@@ -327,6 +348,7 @@ class AllPIL(ImageOnlyTransform):
     def __init__(self, im_size, dataset):
         all_functions = get_all_transform_fs(im_size) 
         # Here we enumerate all of the partial functions that PIL offers...based on AutoAugment paper
+        pdb.set_trace()
         super().__init__("aug_fn", all_functions)
         self.crop_h= im_size
         self.crop_w = im_size 

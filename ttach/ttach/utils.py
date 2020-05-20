@@ -4,10 +4,12 @@ import pdb
 
 means_dict = {'imnet': (0.485, 0.456, 0.406),
              'flowers102': (0.5208, 0.4205, 0.3441),
-             'birds200': (0.485, 0.456, 0.406)}
+             'birds200': (0.485, 0.456, 0.406),
+             'mnist': (1, 1, 1)}
 stds_dict = {'imnet': (0.229, 0.224, 0.225),
              'flowers102': (0.2944, 0.2465, 0.2735),
-             'birds200': (0.229, 0.224, 0.225)}
+             'birds200': (0.229, 0.224, 0.225),
+             'mnist': (1, 1, 1)}
 
 def pil_wrap(img, stds, means):
   """Convert the `img` numpy tensor to a PIL Image."""
