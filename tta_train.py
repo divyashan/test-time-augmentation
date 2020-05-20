@@ -232,6 +232,8 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()   
+                for p in model.parameters():
+                    p.data.clamp_(0)                 
             else:
                 n_batches = int(len(examples)/1000 + 1)
                 for i in range(n_batches):
@@ -254,8 +256,8 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()   
-            for p in model.parameters():
-                p.data.clamp_(0)                 
+                    for p in model.parameters():
+                        p.data.clamp_(0)                 
             progress.display(epoch)
         model_prefix = agg_models_dir + '/' + model_name + '/' + aug_name
         if not os.path.exists(model_prefix):
