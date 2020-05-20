@@ -31,7 +31,6 @@ class ImprovedLR(nn.Module):
 class TTARegression(nn.Module):
     def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even'):
         super().__init__()
-        # To make "a" and "b" real parameters of the model, we need to wrap them with nn.Parameter
         
         self.coeffs = nn.Parameter(torch.randn((n_augs, n_classes), requires_grad=True, dtype=torch.float))
         self.temperature = temp_scale
@@ -45,6 +44,24 @@ class TTARegression(nn.Module):
         # Computes the outputs / predictions
         x = x/self.temperature
         mult = self.coeffs * x
+        return mult.sum(axis=1)
+
+class TTARegressionFrozen(nn.Module):
+    def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even'):
+        super().__init__()
+        self.temperature = temp_scale
+        if initialization == 'even':
+            fill_val = 1/n_augs
+            init_array = np.full((n_augs, 1), fill_val)
+            coeffs = torch.cat([torch.Tensor(init_array) for i in range(n_classes)])
+            self.coeffs = nn.Parameter(coeffs, requires_grad = True)
+        else:
+            coeffs = torch.cat([torch.Tensor(initialization) for i in range(n_classes)], axis=1)
+            self.coeffs = nn.Parameter(coeffs, requires_grad = True)
+
+    def forward(self, x):
+        x = x/self.temperature
+        mult = (self.coeffs / torch.sum(self.coeffs, axis=0))* x 
         return mult.sum(axis=1)
 
 class TTAPartialRegression(nn.Module):

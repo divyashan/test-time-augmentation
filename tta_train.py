@@ -5,7 +5,7 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
-from tta_agg_models import TTARegression, TTAPartialRegression, ImprovedLR
+from tta_agg_models import TTARegression, TTAPartialRegression, ImprovedLR, TTARegressionFrozen
 from utils.imagenet_utils import accuracy, AverageMeter, ProgressMeter
 from augmentations import get_aug_idxs
 from expmt_vars import val_output_dir, agg_models_dir
@@ -34,7 +34,6 @@ def train_improved_lr(n_augs, n_classes, train_path, coeffs, n_epochs=10, scale=
                 orig_loss, orig_auc = loss, auc
         #weights, _ = nnls(class_outputs.T, class_labels)
         ilr.coeffs[:,i] = plr.coeffs.detach().cpu().numpy()[:,0]
-        print(orig_loss - loss, orig_auc - auc)
     ilr.coeffs = ilr.coeffs / np.sum(ilr.coeffs, axis=0)
     # TODO: save coeffs 
     return ilr
@@ -63,10 +62,64 @@ def train_improved_lr_CE(n_augs, n_classes, train_path, orig_idx, n_epochs=10, s
                 orig_loss, orig_auc = loss, auc
         #weights, _ = nnls(class_outputs.T, class_labels)
         ilr.coeffs[:,i] = plr.coeffs.detach().cpu().numpy()[:,0]
-        print(orig_loss - loss, orig_auc - auc)
     ilr.coeffs = ilr.coeffs / np.sum(ilr.coeffs, axis=0)
     # TODO: save coeffs 
     return ilr
+
+def train_full_lr_frozen(n_augs, n_classes, train_path,coeffs, n_epochs=20, scale=1):
+    hf = h5py.File(train_path, 'r')
+    outputs = hf['batch1_inputs'][:]
+    labels = hf['batch1_labels'][:]
+    n_augs, n_examples, n_classes = outputs.shape
+
+    # class_idxs could also subselect for examples predicted to be class i
+    for j in range(n_epochs):
+        print("EPOCH: ", j)
+        # now the input should be a n_augs x n_examples matrix, for class i
+        # construct labels as 1 for being that class, 0 if its not
+        flrf = TTARegressionFrozen(n_augs, n_classes, scale, initialization=coeffs)
+        for i in range(n_classes):
+            idxs = np.where(labels == i)[0]
+            class_outputs = outputs[:,idxs,:]
+            class_labels = labels[idxs]
+            loss, auc = train_epoch_full_lr_frozen(flrf, class_outputs, class_labels, i)
+            if j == 0:
+                orig_loss, orig_auc = loss, auc
+        #weights, _ = nnls(class_outputs.T, class_labels)
+    # TODO: save coeffs
+    #model_prefix = agg_models_dir + '/' + model_name + '/' + aug_name
+    return flrf
+
+def train_epoch_full_lr_frozen(model, X, y, class_idx):
+    n_augs = len(X)
+    n_classes = X.shape[2]
+    criterion = torch.nn.CrossEntropyLoss()
+    # use i to set the number of 
+    optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=.01, momentum=.9, weight_decay=1e-4)
+    #model.cuda('cuda:0')
+    #criterion.cuda('cuda:0')
+    model.train()
+    params = torch.cat([x.view(-1) for x in model.parameters()])
+
+    X = np.swapaxes(X, 0, 1)
+    X = torch.Tensor(X)#.cuda('cuda:0', non_blocking=True)
+    y = torch.Tensor(y).long()#.cuda('cuda:0', non_blocking=True)
+    output = model(X)
+
+    #loss = criterion(class_outputs, y)
+    loss = criterion(output, y)
+    acc1, _ = accuracy(output, y, topk=(1, 5))
+    optimizer.zero_grad()
+    loss.backward()
+    # Zero out the irrelevant gradients to this class's optimization
+    for j in range(n_classes):
+        if j != class_idx:
+            model.coeffs.grad[:,j] = 0
+    optimizer.step()
+    for p in model.parameters():
+        p.data.clamp_(0)
+    print(acc1.item(), loss.item())
+    return loss.item(), acc1.item()
 
 def train_epoch_CE(model, X, y):
     n_augs = len(X)
@@ -125,6 +178,10 @@ def train_epoch_BCE(model, X, y, class_idx):
     for p in model.parameters():
         p.data.clamp_(0)
     return loss, roc_auc_score(y, np_output) 
+
+
+
+
 def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, temp_scale):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
