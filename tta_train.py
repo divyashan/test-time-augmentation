@@ -19,8 +19,7 @@ def train_improved_lr(n_augs, n_classes, train_path, coeffs, n_epochs=10, scale=
     labels = hf['batch1_labels'][:]
     n_augs, n_examples, n_classes = outputs.shape
 
-    for i in range(n_classes):
-        print("CLASS: ", i)
+    for i in tqdm(range(n_classes)):
         class_outputs = outputs[:,:,i]
         class_outputs = np.expand_dims(class_outputs, 2)
         class_labels = np.zeros(labels.shape)
@@ -47,8 +46,7 @@ def train_improved_lr_CE(n_augs, n_classes, train_path, orig_idx, n_epochs=10, s
     labels = hf['batch1_labels'][:]
     n_augs, n_examples, n_classes = outputs.shape
 
-    for i in range(n_classes):
-        print("CLASS: ", i)
+    for i in tqdm(range(n_classes)):
         # class_idxs could also subselect for examples predicted to be class i 
         class_idxs = np.where(labels == i)[0]
         pred_idxs = np.where(np.argmax(outputs[orig_idx], axis=1) == i)[0]
@@ -148,14 +146,12 @@ def train_epoch_BCE(model, X, y, class_idx):
     n_augs = len(X)
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=.01, momentum=.9, weight_decay=1e-4)
-    model.cuda('cuda:0')
-    criterion.cuda('cuda:0')
     model.train()
     params = torch.cat([x.view(-1) for x in model.parameters()])
 
     X = np.swapaxes(X, 0, 1)
-    X = torch.Tensor(X).cuda('cuda:0', non_blocking=True)
-    y = torch.Tensor(y).cuda('cuda:0', non_blocking=True)
+    X = torch.Tensor(X)#.cuda('cuda:0', non_blocking=True)
+    y = torch.Tensor(y)#.cuda('cuda:0', non_blocking=True)
     
     output = model(X)
     output = torch.softmax(output, axis=1)
