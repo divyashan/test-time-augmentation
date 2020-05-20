@@ -20,6 +20,7 @@ def train_improved_lr(n_augs, n_classes, train_path, coeffs, n_epochs=10, scale=
     n_augs, n_examples, n_classes = outputs.shape
 
     for i in range(n_classes):
+        print("CLASS: ", i)
         class_outputs = outputs[:,:,i]
         class_outputs = np.expand_dims(class_outputs, 2)
         class_labels = np.zeros(labels.shape)
@@ -47,6 +48,7 @@ def train_improved_lr_CE(n_augs, n_classes, train_path, orig_idx, n_epochs=10, s
     n_augs, n_examples, n_classes = outputs.shape
 
     for i in range(n_classes):
+        print("CLASS: ", i)
         # class_idxs could also subselect for examples predicted to be class i 
         class_idxs = np.where(labels == i)[0]
         pred_idxs = np.where(np.argmax(outputs[orig_idx], axis=1) == i)[0]
@@ -83,8 +85,6 @@ def train_full_lr_frozen(n_augs, n_classes, train_path,coeffs, n_epochs=20, scal
             class_outputs = outputs[:,idxs,:]
             class_labels = labels[idxs]
             loss, auc = train_epoch_full_lr_frozen(flrf, class_outputs, class_labels, i)
-            if j == 0:
-                orig_loss, orig_auc = loss, auc
         #weights, _ = nnls(class_outputs.T, class_labels)
     # TODO: save coeffs
     #model_prefix = agg_models_dir + '/' + model_name + '/' + aug_name
@@ -118,7 +118,6 @@ def train_epoch_full_lr_frozen(model, X, y, class_idx):
     optimizer.step()
     for p in model.parameters():
         p.data.clamp_(0)
-    print(acc1.item(), loss.item())
     return loss.item(), acc1.item()
 
 def train_epoch_CE(model, X, y):
