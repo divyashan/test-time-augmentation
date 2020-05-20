@@ -52,6 +52,8 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
             model.load_state_dict(torch.load(model_path))
         coeffs = model.coeffs.detach().numpy()
         model = train_full_lr_frozen(len(aug_idxs),n_classes,val_path, coeffs, n_epochs,temp_scale)
+        pdb.set_trace()
+        model.cpu()
         model.eval()
         return model
     elif agg_name == 'partial_lr':

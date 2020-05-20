@@ -80,6 +80,7 @@ def train_full_lr_frozen(n_augs, n_classes, train_path,coeffs, n_epochs=20, scal
         # now the input should be a n_augs x n_examples matrix, for class i
         # construct labels as 1 for being that class, 0 if its not
         flrf = TTARegressionFrozen(n_augs, n_classes, scale, initialization=coeffs)
+        flrf.cuda()
         for i in range(n_classes):
             idxs = np.where(labels == i)[0]
             class_outputs = outputs[:,idxs,:]
@@ -96,7 +97,6 @@ def train_epoch_full_lr_frozen(model, X, y, class_idx):
     criterion = torch.nn.CrossEntropyLoss()
     # use i to set the number of 
     optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=.01, momentum=.9, weight_decay=1e-4)
-    model.cuda('cuda:0')
     criterion.cuda('cuda:0')
     model.train()
     params = torch.cat([x.view(-1) for x in model.parameters()])
