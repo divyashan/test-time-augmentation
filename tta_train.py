@@ -1,5 +1,4 @@
 import os
-import pdb
 import torch
 import h5py
 import numpy as np
@@ -8,7 +7,7 @@ from tqdm import tqdm
 from tta_agg_models import TTARegression, TTAPartialRegression, ImprovedLR, TTARegressionFrozen
 from utils.imagenet_utils import accuracy, AverageMeter, ProgressMeter
 from augmentations import get_aug_idxs
-from expmt_vars import val_output_dir, agg_models_dir
+from expmt_vars import val_output_dir, agg_models_dir, model_name
 from sklearn.metrics import log_loss, roc_auc_score
 
 def train_improved_lr(n_augs, n_classes, train_path, coeffs, n_epochs=10, scale=1):
@@ -51,8 +50,8 @@ def train_improved_lr_CE(n_augs, n_classes, train_path, orig_idx, n_epochs=10, s
         class_idxs = np.where(labels == i)[0]
         pred_idxs = np.where(np.argmax(outputs[orig_idx], axis=1) == i)[0]
         idxs = np.array(list(set(np.concatenate([class_idxs, pred_idxs]))))
-        class_outputs = outputs[:,idxs,:]
-        class_labels = labels[idxs]
+        class_outputs = outputs[:,idxs.astype(int),:]
+        class_labels = labels[idxs.astype(int)]
         # now the input should be a n_augs x n_examples matrix, for class i
         # construct labels as 1 for being that class, 0 if its not
         plr = TTAPartialRegression(n_augs, n_classes, scale, initialization='even') 
@@ -63,41 +62,52 @@ def train_improved_lr_CE(n_augs, n_classes, train_path, orig_idx, n_epochs=10, s
         #weights, _ = nnls(class_outputs.T, class_labels)
         ilr.coeffs[:,i] = plr.coeffs.detach().cpu().numpy()[:,0]
     ilr.coeffs = ilr.coeffs / np.sum(ilr.coeffs, axis=0)
-    # TODO: save coeffs 
     return ilr
 
-def train_full_lr_frozen(n_augs, n_classes, train_path,coeffs, n_epochs=20, scale=1):
+def train_full_lr_frozen(aug_name, n_augs, n_classes, train_path,coeffs, n_epochs=20, scale=1):
     hf = h5py.File(train_path, 'r')
     outputs = hf['batch1_inputs'][:]
     labels = hf['batch1_labels'][:]
     n_augs, n_examples, n_classes = outputs.shape
 
     # class_idxs could also subselect for examples predicted to be class i
-    for j in range(n_epochs):
-        print("EPOCH: ", j)
+    losses_arr = []
+    accs_arr = []
+    
+    flrf = TTARegressionFrozen(n_augs, n_classes, scale, initialization=coeffs)
+    flrf.cuda()
+    flrf.train()
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(flrf.parameters(), lr=.01, momentum=.9, weight_decay=1e-4)
+    #optimizer = torch.optim.Adam(flrf.parameters(), lr=.01, weight_decay=1e-4)
+    criterion.cuda('cuda:0')
+    acc_logs_path = agg_models_dir + '/' + model_name + '/' + aug_name + '/full_lr_freeze_accs'
+    loss_logs_path = agg_models_dir + '/' + model_name + '/' + aug_name + '/full_lr_freeze_losses'
+    for j in tqdm(range(n_epochs)):
         # now the input should be a n_augs x n_examples matrix, for class i
         # construct labels as 1 for being that class, 0 if its not
-        flrf = TTARegressionFrozen(n_augs, n_classes, scale, initialization=coeffs)
-        flrf.cuda()
+        loss_avg = []
+        acc_avg = []
         for i in range(n_classes):
             idxs = np.where(labels == i)[0]
             class_outputs = outputs[:,idxs,:]
             class_labels = labels[idxs]
-            loss, auc = train_epoch_full_lr_frozen(flrf, class_outputs, class_labels, i)
-        #weights, _ = nnls(class_outputs.T, class_labels)
-    # TODO: save coeffs
-    #model_prefix = agg_models_dir + '/' + model_name + '/' + aug_name
+            loss, acc = train_epoch_full_lr_frozen(flrf, outputs, labels, i, 
+                                                   criterion, optimizer)
+            loss_avg.append(loss)
+            acc_avg.append(acc)
+        losses.append(loss_avg)
+        accs.append(acc_avg)
+        np.savetxt(loss_logs_path, losses)
+        np.savetxt(acc_logs_path, accs)
+        model_path = agg_models_dir + '/' + model_name + '/' + aug_name + '/full_lr_freeze.pth'
+        torch.save(flrf.state_dict(), model_path)
     return flrf
 
-def train_epoch_full_lr_frozen(model, X, y, class_idx):
+def train_epoch_full_lr_frozen(model, X, y, class_idx, criterion, optimizer):
     n_augs = len(X)
     n_classes = X.shape[2]
-    criterion = torch.nn.CrossEntropyLoss()
     # use i to set the number of 
-    optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=.01, momentum=.9, weight_decay=1e-4)
-    criterion.cuda('cuda:0')
-    model.train()
-    params = torch.cat([x.view(-1) for x in model.parameters()])
 
     X = np.swapaxes(X, 0, 1)
     X = torch.Tensor(X).cuda('cuda:0', non_blocking=True)
@@ -114,6 +124,8 @@ def train_epoch_full_lr_frozen(model, X, y, class_idx):
         if j != class_idx:
             model.coeffs.grad[:,j] = 0
     optimizer.step()
+    
+    params = torch.cat([x.view(-1) for x in model.parameters()])
     for p in model.parameters():
         p.data.clamp_(0)
     return loss.item(), acc1.item()
@@ -138,8 +150,8 @@ def train_epoch_CE(model, X, y):
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
-    for p in model.parameters():
-        p.data.clamp_(0)
+    #for p in model.parameters():
+    #    p.data.clamp_(0)
     return loss.item(), acc1.item()
 
 def train_epoch_BCE(model, X, y, class_idx):
@@ -177,21 +189,21 @@ def train_epoch_BCE(model, X, y, class_idx):
 
 
 
-def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, temp_scale):
+def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, temp_scale, initialization='even'):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     top5 = AverageMeter('Acc@5', ':6.2f')
     idxs = get_aug_idxs(aug_name)
-    datapath = val_output_dir + '/' + model_name + '_val.h5'
+    datapath = val_output_dir + '/' + model_name + '_val_train.h5'
     
     n_augs = len(idxs)
     criterion = torch.nn.CrossEntropyLoss()
     if agg_name == 'full':
-        model = TTARegression(n_augs,n_classes,temp_scale,'even')
+        model = TTARegression(n_augs,n_classes,temp_scale,initialization)
     elif agg_name == 'partial':
-        model = TTAPartialRegression(n_augs,n_classes,temp_scale, 'even')
+        model = TTAPartialRegression(n_augs,n_classes,temp_scale, initialization)
     optimizer = torch.optim.SGD(model.parameters(), lr=.01, momentum=.9, weight_decay=1e-4)
 
     model.cuda('cuda:0')
@@ -200,6 +212,8 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
     lambda1 = .01 
     params = torch.cat([x.view(-1) for x in model.parameters()])
 
+    losses_arr = []
+    accs_arr = []
     with h5py.File(datapath, 'r') as hf:
         for epoch in range(epochs):
             progress = ProgressMeter(len(hf.keys()),
@@ -229,8 +243,12 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
                 optimizer.step()   
                 for p in model.parameters():
                     p.data.clamp_(0)                 
+                loss_val = loss.item()
+                acc_val = acc1[0].item()
             else:
                 n_batches = int(len(examples)/1000 + 1)
+                loss_vals = []
+                acc_vals = []
                 for i in range(n_batches):
                     example_batch = examples[i*1000:(i+1)*1000]
                     target_batch = target[i*1000:(i+1)*1000]
@@ -253,11 +271,21 @@ def train_tta_lr(model_name, aug_name, epochs, agg_name, dataset, n_classes, tem
                     optimizer.step()   
                     for p in model.parameters():
                         p.data.clamp_(0)                 
+                    loss_vals.append(loss.item())
+                    acc_vals.append(acc1[0].item())
+                loss_val = np.mean(loss_vals)
+                acc_val = np.mean(acc_vals)
+            losses_arr.append(loss_val)
+            accs_arr.append(acc_val)
             progress.display(epoch)
         model_prefix = agg_models_dir + '/' + model_name + '/' + aug_name
         if not os.path.exists(model_prefix):
             os.makedirs(model_prefix)
         torch.save(model.state_dict(), model_prefix + '/' + agg_name + '_lr.pth')
+        acc_logs_path = agg_models_dir + '/' + model_name + '/' + aug_name + '/' + agg_name + '_accs'
+        loss_logs_path = agg_models_dir + '/' + model_name + '/' + aug_name + '/' + agg_name + '_losses'
+        np.savetxt(loss_logs_path, losses_arr)
+        np.savetxt(acc_logs_path, accs_arr)
     return model
 
     

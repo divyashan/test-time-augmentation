@@ -14,9 +14,9 @@ n_classes = int(sys.argv[2])
 model_name = sys.argv[3]
 gpu_arg = sys.argv[4]
 #aug_order = ['pil']
-aug_order = ['hflip', 'five_crop', 'scale']
+#aug_order = ['hflip', 'five_crop', 'scale']
 #aug_order = ['hflip', 'vflip']
-#aug_order = ['flips']
+aug_order = ['flips']
 
 parts = sys.argv[5]
 gen_val_outputs = True if parts[0] == '1' else False

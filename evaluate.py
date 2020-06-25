@@ -82,7 +82,8 @@ def evaluate_aggregation_outputs(model_name, dataset, mode='val'):
     aug_names = ['orig', 'combo' ] + aug_order
     aug_names = ['orig', 'combo']
     #agg_names = ['mean', 'gps', 'partial_lr', 'full_lr', 'max']
-    agg_names = [ 'mean', 'gps', 'partial_lr', 'full_lr_freeze', 'improved_lr', 'improved_lr_ce'] 
+    agg_names = [ 'mean', 'gps', 'partial_lr', 'full_lr', 'ours', 'max'] 
+    agg_names= ['mean', 'partial_lr', 'full_lr']
     n_runs = 5 
     results = []
     for aug_name in aug_names:

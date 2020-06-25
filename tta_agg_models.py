@@ -32,13 +32,14 @@ class TTARegression(nn.Module):
     def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even'):
         super().__init__()
         
-        self.coeffs = nn.Parameter(torch.randn((n_augs, n_classes), requires_grad=True, dtype=torch.float))
-        self.temperature = temp_scale
         if initialization == 'even':
+            self.coeffs = nn.Parameter(torch.randn((n_augs, n_classes), requires_grad=True, dtype=torch.float))
             self.coeffs.data.fill_(1.0/n_augs) 
-        elif initialization== 'original':
-            self.coeffs.data[0,:].fill_(1)
-            self.coeffs.data[1,:].fill_(0)
+        else:
+            coeffs = torch.cat([torch.Tensor(initialization) for i in range(n_classes)], axis=1)
+            self.coeffs = nn.Parameter(coeffs, requires_grad = True)
+
+        self.temperature = temp_scale
     
     def forward(self, x):
         # Computes the outputs / predictions
@@ -61,7 +62,27 @@ class TTARegressionFrozen(nn.Module):
 
     def forward(self, x):
         x = x/self.temperature
-        mult = (self.coeffs / torch.sum(self.coeffs, axis=0))* x 
+        mult = (self.coeffs / torch.sum(self.coeffs, axis=0)) * x 
+        #mult = self.coeffs * x
+        return mult.sum(axis=1)
+
+class ClassPartialLR(nn.Module):
+    def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even'):
+        super().__init__()
+        self.temperature = temp_scale
+        if initialization == 'even':
+            fill_val = 1/n_augs
+            init_array = np.full((n_augs, 1), fill_val)
+            coeffs = torch.cat([torch.Tensor(init_array) for i in range(n_classes)])
+            self.coeffs = nn.Parameter(coeffs, requires_grad = True)
+        else:
+            coeffs = torch.cat([torch.Tensor(initialization) for i in range(n_classes)], axis=1)
+            self.coeffs = nn.Parameter(coeffs, requires_grad = True)
+
+    def forward(self, x):
+        x = x/self.temperature
+        mult = (self.coeffs / torch.sum(self.coeffs, axis=0)) * x 
+        #mult = self.coeffs * x
         return mult.sum(axis=1)
 
 class TTAPartialRegression(nn.Module):
@@ -117,13 +138,11 @@ class GPS(nn.Module):
             nll_vals = []
             for i in range(len(remaining_idxs)):
                 possible_outputs = new_weight*aug_outputs[i] + old_weight* current_preds
-                try:
-                    nll_vals.append(log_loss(labels, possible_outputs, labels=np.arange(n_classes)))
-                except:
-                    pdb.set_trace()
+                nll_vals.append(log_loss(labels, possible_outputs, labels=np.arange(n_classes)))
             next_idx = remaining_idxs[np.argmin(nll_vals)]
             remaining_idxs.remove(next_idx)
             idxs.append(next_idx)
+            current_preds = new_weight*aug_outputs[next_idx] + old_weight*current_preds
         print('IDXS: ', idxs)
         return idxs
 
