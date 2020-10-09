@@ -41,6 +41,7 @@ class Net(nn.Module):
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
+    loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -52,6 +53,8 @@ def train(args, model, device, train_loader, optimizer, epoch):
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.item()))
+        loss += loss.item()
+    return loss/len(train_loader.dataset)
 
 
 def test(model, device, test_loader):
@@ -71,7 +74,7 @@ def test(model, device, test_loader):
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
-
+    return test_loss
 
 def main():
     # Training settings
@@ -80,7 +83,7 @@ def main():
                         help='input batch size for training (default: 64)')
     parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                         help='input batch size for testing (default: 1000)')
-    parser.add_argument('--epochs', type=int, default=14, metavar='N',
+    parser.add_argument('--epochs', type=int, default=10,metavar='N',
                         help='number of epochs to train (default: 14)')
     parser.add_argument('--lr', type=float, default=1.0, metavar='LR',
                         help='learning rate (default: 1.0)')
@@ -103,37 +106,44 @@ def main():
     device = torch.device("cuda" if use_cuda else "cpu")
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-    pct = .05
-    dataset = datasets.MNIST('../data', train=True, download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ]))
-    n_examples = len(dataset)
-    subset_indices = np.random.choice(np.arange(n_examples), int(pct*n_examples), replace=False)   
-    np.random.shuffle(subset_indices)
-    train_loader = torch.utils.data.DataLoader(dataset,
-        batch_size=args.batch_size, shuffle=False, 
-        sampler=SubsetRandomSampler(subset_indices), **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('../data', train=False, transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=args.test_batch_size, shuffle=True, **kwargs)
+    pcts = [.005, .01, .05, .075,  .1, .2, .3, .4, .5, .6, .7, .8, .9, 1]
+    for pct in pcts:
+        epochs = 20 
+        dataset = datasets.MNIST('../data', train=True, download=True,
+                           transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize((0.1307,), (0.3081,))
+                           ]))
+        n_examples = len(dataset)
+        subset_indices = np.random.choice(np.arange(n_examples), int(pct*n_examples), replace=False)   
+        np.random.shuffle(subset_indices)
+        train_loader = torch.utils.data.DataLoader(dataset,
+            batch_size=args.batch_size, shuffle=False, 
+            sampler=SubsetRandomSampler(subset_indices), **kwargs)
+        test_loader = torch.utils.data.DataLoader(
+            datasets.MNIST('../data', train=False, transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize((0.1307,), (0.3081,))
+                           ])),
+            batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-    model = Net().to(device)
-    optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
+        model = Net().to(device)
+        optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
-    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
-    for epoch in range(1, args.epochs + 1):
-        train(args, model, device, train_loader, optimizer, epoch)
-        test(model, device, test_loader)
-        scheduler.step()
-
-    if args.save_model:
-        torch.save(model.state_dict(), "./saved_models/mnist/mnist_cnn.pth")
-
+        scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+        tr_ls = []
+        te_ls = []
+        for epoch in range(1, epochs + 1):
+            tr_l = train(args, model, device, train_loader, optimizer, epoch)
+            te_l = test(model, device, test_loader)
+            scheduler.step()
+            tr_ls.append(tr_l)
+            te_ls.append(te_l)
+            
+        if args.save_model:
+            torch.save(model.state_dict(), "./saved_models/mnist/mnist_cnn_" + str(pct) + ".pth")
+            np.savetxt("./saved_models/mnist/mnist_cnn_" + str(pct) + "_training_losses.txt", tr_ls)
+            np.savetxt("./saved_models/mnist/mnist_cnn_" + str(pct) + "_test_losses.txt", te_ls)
 
 if __name__ == '__main__':
     main()
