@@ -37,12 +37,12 @@ class ModelOutputs():
         agg_f = get_agg_f(self.aug_name, agg_name, self.model_name, self.dataset, n_classes)
         agg_outputs_path = self.agg_outputs_folder + '/' + agg_name + '.h5'
         top1_runs, top5_runs = [[] for i in range(n_runs)], [[] for i in range(n_runs)]
-        
-        with h5py.File(agg_outputs_path) as hf_agg:
+        with h5py.File(agg_outputs_path, 'w') as hf_agg:
             with h5py.File(self.outputs_path) as hf:
                 # Pre-computed aggregated outputs
                 for key_pre in tqdm(self.val_key_prefixes):
                     if key_pre + '_outputs' in hf_agg.keys():
+                        print("Using pre-computed values")
                         agg_outputs = hf_agg[key_pre + '_outputs'].value
                         labels = hf_agg[key_pre + '_labels'].value
                     else:
@@ -79,11 +79,10 @@ class ModelOutputs():
 
 def evaluate_aggregation_outputs(model_name, dataset, mode='val'):
     # aug_names = ['hflip', 'orig','five_crop', 'colorjitter', 'rotation', 'combo']
-    aug_names = ['orig', 'combo' ] + aug_order
     aug_names = ['orig', 'combo']
-    #agg_names = ['mean', 'gps', 'partial_lr', 'full_lr', 'max']
     agg_names = [ 'mean', 'gps', 'partial_lr', 'full_lr', 'ours', 'max'] 
-    agg_names= ['mean', 'partial_lr', 'full_lr']
+ #   agg_names = [ 'partial_lr', 'full_lr', 'ours', 'max'] 
+#    agg_names = ['mean']
     n_runs = 5 
     results = []
     for aug_name in aug_names:

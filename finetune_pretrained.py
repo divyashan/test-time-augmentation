@@ -5,6 +5,7 @@ Based on:
 """
 
 import argparse
+import numpy as np
 import os
 import torch
 import torchvision
@@ -18,11 +19,11 @@ from cnn_finetune import make_model
 from utils.gpu_utils import restrict_GPU_pytorch
 from dataloaders import get_dataloader
 
-gpu_arg = '1'
-restrict_GPU_pytorch(gpu_arg)
 parser = argparse.ArgumentParser(description='cnn_finetune cifar 10 example')
 parser.add_argument('--dataset', type=str, default='flowers102', metavar='N',
                     help='dataset to finetune to (default: flowers102)')
+parser.add_argument('--add', type=bool, default=False, metavar='N',
+                    help='include labelled data TTA methods see')
 parser.add_argument('--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
 parser.add_argument('--test-batch-size', type=int, default=64, metavar='N',
@@ -43,11 +44,13 @@ parser.add_argument('--model-name', type=str, default='resnet50', metavar='M',
                     help='model name (default: resnet50)')
 parser.add_argument('--dropout-p', type=float, default=0.2, metavar='D',
                     help='Dropout probability (default: 0.2)')
+parser.add_argument('--gpu', type=str, default='0', metavar='D',
+                    help='GPU ID')
 
 args = parser.parse_args()
+restrict_GPU_pytorch(args.gpu)
 use_cuda = not args.no_cuda and torch.cuda.is_available()
 device = torch.device('cuda' if use_cuda else 'cpu')
-
 
 def train(model, epoch, optimizer, train_loader, criterion=nn.CrossEntropyLoss()):
     total_loss = 0
@@ -88,12 +91,17 @@ def test(model, test_loader, criterion=nn.CrossEntropyLoss()):
 
 def main():
     '''Main function to run code in this script'''
+    
+    
     model_name = args.model_name
     dataset = args.dataset
     if dataset == 'flowers102':
         n_classes = 102
     elif dataset == 'birds200':
         n_classes = 200
+    elif dataset == 'imnet':
+        n_classes = 1000
+
     model = make_model(
         model_name,
         pretrained=True,
@@ -102,8 +110,20 @@ def main():
         input_size=(224, 224) if model_name.startswith(('vgg', 'squeezenet')) else None,
     )
     model = model.to(device)
-    train_loader = get_dataloader(dataset, 'train', 128, True)
-    test_loader = get_dataloader(dataset, 'val', 128, False)
+    
+    additional_idxs = None
+    add = "0"
+    batch_size = 128 
+    pct = 1.0
+    if args.add: 
+        additional_idxs = np.load('./' + dataset + '/train_idxs.npy')
+        test_idxs = np.load('./' + dataset + '/test_idxs.npy')
+        add = "added_data_" + str(pct)
+    train_loader = get_dataloader(dataset, 'train', batch_size, True, additional_idxs)
+
+    # If we're training 
+    
+    test_loader = get_dataloader(dataset, 'val', batch_size, False)
     test(model, test_loader)
 
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
@@ -114,10 +134,11 @@ def main():
     # Train
     for epoch in range(1, args.epochs + 1):
         # Decay Learning Rate
-        scheduler.step(epoch)
         train(model, epoch, optimizer, train_loader)
         test(model, test_loader)
+        scheduler.step(epoch)
         if epoch % 5 == 0:
-            torch.save(model.state_dict(), './saved_models/' + dataset + '/' + model_name + '_' + str(epoch) + '.pth')
+            pdb.set_trace()
+            torch.save(model.state_dict(), './saved_models/' + dataset + '/' + model_name + '_' + add + "_" + str(epoch) + '.pth')
 if __name__ == '__main__':
     main()

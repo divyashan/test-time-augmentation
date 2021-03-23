@@ -53,9 +53,10 @@ def get_mnist_model(model_name):
 
 def get_flowers_model(model_name):
     m_name = model_name
-    if model_name == 'MobileNetV2':
+    m_name = '_'.join(m_name.split('_')[:1])
+    if m_name == 'MobileNetV2':
         m_name = 'mobilenet_v2'
-    if model_name == 'inceptionv3':
+    if m_name == 'inceptionv3':
         m_name = 'inception_v3'
     model = make_model(
                     m_name,
@@ -63,14 +64,16 @@ def get_flowers_model(model_name):
                     num_classes=n_classes,
                     input_size=(224, 224), 
                 )
-    model.load_state_dict(torch.load('./saved_models/flowers102/' + m_name+ '.pth'))
+    m_path = './saved_models/flowers102/' + model_name+ '.pth'
+    model.load_state_dict(torch.load(m_path))
     return model
 
 def get_birds_model(model_name):
     m_name = model_name
-    if model_name == 'MobileNetV2':
+    m_name = '_'.join(m_name.split('_')[:1])
+    if m_name == 'MobileNetV2':
         m_name = 'mobilenet_v2'
-    if model_name == 'inceptionv3':
+    if m_name == 'inceptionv3':
         m_name = 'inception_v3'
     model = make_model(
                     m_name,
@@ -78,7 +81,8 @@ def get_birds_model(model_name):
                     num_classes=n_classes,
                     input_size=(224, 224), 
                 )
-    model.load_state_dict(torch.load('./saved_models/birds200/' + m_name+ '.pth'))
+    m_path = './saved_models/birds200/' + model_name+ '.pth'
+    model.load_state_dict(torch.load(m_path))
     return model
     
 def get_svhn_model():

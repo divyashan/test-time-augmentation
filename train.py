@@ -13,17 +13,18 @@ dataset = sys.argv[1]
 n_classes = int(sys.argv[2])
 model_name = sys.argv[3]
 gpu_arg = sys.argv[4]
-#aug_order = ['pil']
+aug_order = ['pil']
 #aug_order = ['hflip', 'five_crop', 'scale']
 #aug_order = ['hflip', 'vflip']
-aug_order = ['flips']
+#aug_order = ['flips']
+#aug_order = ['hflip', 'modified_five_crop', 'scale']
+#aug_order = ['hflip', 'scale']
 
 parts = sys.argv[5]
 gen_val_outputs = True if parts[0] == '1' else False
 split_val = True if parts[1] == '1' else False
 evaluate = True if parts[2] == '1' else False
 
-gen_train_outputs = False
 threshold = False
 
 restrict_GPU_pytorch(gpu_arg)
@@ -41,6 +42,7 @@ tta_model.to('cuda:0')
 aug_list = write_aug_list(tta_model.transforms.aug_transform_parameters,aug_order)
 np.save('./' + dataset + '/' + tta_policy + '/aug_list.npy', aug_list)
 np.save('./' + dataset + '/' + tta_policy + '/aug_order.npy', aug_order)
+from utils.aug_utils import invert_aug_list
 print("[X] Model loaded!")
 
 from dataloaders import get_dataloader
@@ -52,6 +54,8 @@ import shutil
 # Generate validation outputs
 if gen_val_outputs:
     output_file = val_output_dir + "/" + model_name + ".h5"
+    if os.path.exists(output_file):
+        os.remove(output_file)
     if not check_if_finished(output_file): 
         dataloader = get_dataloader(dataset, val_dir, batch_size) 
         write_augmentation_outputs(tta_model, dataloader, output_file, n_classes)
@@ -62,15 +66,8 @@ if split_val:
     output_file = val_output_dir + "/" + model_name + ".h5"
     split_val_outputs(output_file)
     print("[X} Val outputs split")
-# Generate training outputs
-if gen_train_outputs:
-    output_file =  train_output_dir + "/" + model_name + ".h5"
-    if not check_if_finished(output_file): 
-        # write out testaugmented outputs on train data
-        dataloader = get_dataloader(dataset, train_dir, batch_size) 
-        write_augmentation_outputs(tta_model, dataloader, output_file, n_classes)
-    print("[X] Train outputs written!")
 
+# Evaluate TTA models
 if evaluate:
     agg_model_path = agg_models_dir + '/' + model_name
     agg_output_path = aggregated_outputs_dir + '/val/' + model_name
@@ -82,6 +79,3 @@ if evaluate:
     #evaluate_aggregation_outputs(model_name, dataset, 'train')
     print("[X] Aggregated outputs written + evaluated!")
 
-if threshold:
-    evaluate_threshold(model_name)
-    print("[X] Thresholding evaluated!")

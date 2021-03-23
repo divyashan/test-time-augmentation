@@ -2,8 +2,8 @@ import os
 import torch
 import numpy as np
 from augmentations import get_aug_idxs
-from tta_agg_models import TTARegression, TTAPartialRegression, GPS, ImprovedLR, TTARegressionFrozen
-from tta_train import train_tta_lr, train_improved_lr, train_improved_lr_CE, train_full_lr_frozen
+from tta_agg_models import TTARegression, TTAPartialRegression, GPS
+from tta_train import train_tta_lr
 from expmt_vars import agg_models_dir, val_output_dir
 from utils.imagenet_utils import accuracy
 import pdb
@@ -22,24 +22,11 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
     #temp_scale = 1
     if agg_name == 'mean':
         return mean_agg_f(len(aug_idxs), n_classes)
-    
-    elif agg_name == 'improved_lr_ce':
-        n_epochs = 20
-        model = train_improved_lr_CE(len(aug_idxs), n_classes,val_path,orig_idx,20, temp_scale)
-        return model
-    
-
     elif agg_name == 'full_lr':
         n_epochs = 30 
-        #model_path = agg_models_dir + '/'+model_name+'/'+aug_name + '/partial_lr.pth'
-        #model = TTAPartialRegression(len(aug_idxs),n_classes,temp_scale,'even')
-        #if os.path.exists(model_path):
-        #    model.load_state_dict(torch.load(model_path))
-        #coeffs = model.coeffs.detach().numpy()
         coeffs = 'even' 
         model_path = agg_models_dir + '/'+model_name+'/'+aug_name + '/full_lr.pth'
         if not os.path.exists(model_path):
-            # train the model
             model = train_tta_lr(model_name, aug_name, n_epochs, 
                                  'full', dataset, n_classes, 1, coeffs) 
         model = TTARegression(len(aug_idxs),n_classes, 1 , 'even')
@@ -92,30 +79,6 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
         model = GPS(n_policies, val_path, temp_scale)
         return model
         
-    elif agg_name == 'improved_lr':
-        model_path = agg_models_dir + '/'+model_name+'/'+aug_name + '/partial_lr.pth'
-        model = TTAPartialRegression(len(aug_idxs),n_classes,temp_scale,'even')
-        coeffs = model.coeffs.detach().numpy()
-        n_epochs = 20
-        model = train_improved_lr(len(aug_idxs), n_classes,
-                                  val_path, coeffs,20, temp_scale)
-        return model
-    #elif agg_name == 'full_lr_freeze':
-    #    n_epochs = 100 
-    #    model_path = agg_models_dir + '/'+model_name+'/'+aug_name + '/partial_lr.pth'
-    #    model = TTAPartialRegression(len(aug_idxs),n_classes,temp_scale,'even')
-    #    if os.path.exists(model_path):
-    #        model.load_state_dict(torch.load(model_path))
-    #    coeffs = model.coeffs.detach().numpy()
-    #    model = train_full_lr_frozen(aug_name, len(aug_idxs),n_classes,val_path, 
-    #                                 coeffs, n_epochs,temp_scale)
-    #    model.cpu()
-    #    model.eval()
-    #    return model
-    # could do max too?
-    # add support for naming the learned parameters
-    # lr_agg_f(aug_idxs, model_name)
-
 def mean_agg_f(n_augs, n_classes):#
     coeffs = np.zeros((n_augs, n_classes))
     coeffs[:,:] = 1/n_augs

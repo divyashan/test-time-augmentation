@@ -65,6 +65,7 @@ def write_augmentation_outputs(tta_model, dataloader, output_file, n_classes):
             end = start + min(batch_size,output.shape[1])
             all_outputs[:,start:end,:] = output
             all_targets[start:end] = target
+        assert(all_outputs.shape[1] == all_targets.shape[0])
         flush_to_file(i, all_outputs, all_targets)
 
 def get_single_aug_idxs(aug_name):

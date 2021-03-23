@@ -18,7 +18,15 @@ def remove_old_results(agg_model_dir, agg_outputs_dir):
         os.remove()
 def get_tta_functions_from_aug_order(aug_order, dataset):
     crop_size = 224
+    if dataset == 'cifar100':
+        crop_size = 32 
+    elif dataset == 'stl10':
+        crop_size = 96
     if aug_order[0] == 'pil':
+        if dataset == 'stl10':
+            crop_size = 96
+        elif dataset == 'cifar100':
+            crop_size = 32 
         tta_functions = tta.base.Compose([ tta.transforms.AllPIL(crop_size, dataset)])
         return tta_functions
     transform_map = {'hflip': tta.transforms.HorizontalFlip(),
@@ -32,16 +40,18 @@ def get_tta_functions_from_aug_order(aug_order, dataset):
     return tta_functions
 
 def setup(dataset, n_classes, model_name, aug_order):
-    crop_size = 224
-    batch_size = 2 
+    batch_size = 8 
 
     train_dir = "/data/ddmg/neuro/datasets/" + dataset + "/train/"
     val_dir = "/data/ddmg/neuro/datasets/" + dataset + "/val"
     if dataset == 'imnet':
         train_dir = "/data/ddmg/neuro/datasets/ILSVRC2012/train"
         val_dir = "/data/ddmg/neuro/datasets/ILSVRC2012/val"
-    #aug_order = ['pil']
+    aug_order = ['pil']
+    #aug_order = ['hflip', 'five_crop', 'scale']
+    #aug_order = ['hflip', 'five_crop']
     #aug_order = ['hflip', 'modified_five_crop', 'scale']
+    #aug_order = ['hflip', 'scale']
     tta_policy = '_'.join(sorted(aug_order))
     train_output_dir = "./" + dataset + "/" + tta_policy + "/model_outputs/train"
     val_output_dir = "./" + dataset + "/" + tta_policy + "/model_outputs/val"
@@ -70,7 +80,6 @@ def setup(dataset, n_classes, model_name, aug_order):
         pickle.dump(expmt_vars_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
     tta_functions = get_tta_functions_from_aug_order(aug_order, dataset)
-
     # Set up directories
 
     if not os.path.exists(train_output_dir):

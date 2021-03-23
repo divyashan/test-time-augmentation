@@ -112,7 +112,7 @@ class GPS(nn.Module):
         self.scale = scale 
         self.n_subpolicies = n_subpolicies
         self.idxs = self.get_idxs(train_path)
-    
+         
     def get_idxs(self, train_path):
         # Implementating of GPS pap 
         # Get outputs
@@ -133,17 +133,15 @@ class GPS(nn.Module):
             # should be of shape number of remaining augs, 
             old_weight = i/self.n_subpolicies
             new_weight = 1-old_weight
-            
             # calculate NLL for each possible output
             nll_vals = []
-            for i in range(len(remaining_idxs)):
-                possible_outputs = new_weight*aug_outputs[i] + old_weight* current_preds
+            for j in range(len(remaining_idxs)):
+                possible_outputs = new_weight*aug_outputs[j] + old_weight* current_preds
                 nll_vals.append(log_loss(labels, possible_outputs, labels=np.arange(n_classes)))
             next_idx = remaining_idxs[np.argmin(nll_vals)]
             remaining_idxs.remove(next_idx)
             idxs.append(next_idx)
-            current_preds = new_weight*aug_outputs[next_idx] + old_weight*current_preds
-        print('IDXS: ', idxs)
+            current_preds = new_weight*outputs[next_idx] + old_weight*current_preds
         return idxs
 
     def forward(self, x):
