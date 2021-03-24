@@ -60,7 +60,7 @@ def get_flowers_dataloader(train, augment, batch_size=32, additional_idxs=None):
     
     shuffle=False
     if train and augment:
-        data_path = '/local/divyas/tta_learn_icml/datasets/flowers102/train'
+        data_path = './datasets/flowers102/train'
         d_transforms = transforms.Compose([
                 transforms.RandomResizedCrop(crop_size),
                 transforms.RandomHorizontalFlip(),
@@ -68,7 +68,7 @@ def get_flowers_dataloader(train, augment, batch_size=32, additional_idxs=None):
                 normalize,])
         shuffle=True
     else:
-        data_path= '/local/divyas/tta_learn_icml/datasets/flowers102/test'
+        data_path= './datasets/flowers102/test'
         d_transforms = transforms.Compose([
             transforms.Resize(image_size),
             transforms.CenterCrop(image_size),
@@ -81,7 +81,7 @@ def get_flowers_dataloader(train, augment, batch_size=32, additional_idxs=None):
         root=data_path,
         transform=d_transforms)
     if train and len(additional_idxs):
-        data_path = '/local/divyas/tta_learn_icml/datasets/flowers102/test'
+        data_path = './datasets/flowers102/test'
         add_dataset = torchvision.datasets.ImageFolder(
             root=data_path,
             transform=d_transforms)
@@ -102,7 +102,7 @@ def get_flowers_dataloader_pct(pct, batch_size=32):
     normalize = transforms.Normalize(mean=[0.5208, 0.4205, 0.3441],
                                      std=[0.2944, 0.2465, 0.2735])
 
-    data_path = '/local/divyas/tta_learn_icml/datasets/flowers102/train'
+    data_path = './datasets/flowers102/train'
     d_transforms = transforms.Compose([
             transforms.RandomResizedCrop(crop_size),
             transforms.RandomHorizontalFlip(),
@@ -134,7 +134,7 @@ def get_birds_dataloader(train, augment, batch_size=32, additional_idxs=None):
     
     shuffle=False
     if train and augment:
-        data_path = '/local/divyas/tta_learn_icml/datasets/cub200/train'
+        data_path = './datasets/cub200/train'
         d_transforms = transforms.Compose([
                 transforms.Resize(image_size),
                 transforms.RandomCrop(crop_size),
@@ -143,7 +143,7 @@ def get_birds_dataloader(train, augment, batch_size=32, additional_idxs=None):
                 normalize,])
         shuffle=True
     else:
-        data_path= '/local/divyas/tta_learn_icml/datasets/cub200/test'
+        data_path= './datasets/cub200/test'
         d_transforms = transforms.Compose([
             transforms.Resize(image_size),
             transforms.CenterCrop(image_size),
@@ -156,7 +156,7 @@ def get_birds_dataloader(train, augment, batch_size=32, additional_idxs=None):
         root=data_path,
         transform=d_transforms)
     if train and len(additional_idxs):
-        data_path = '/local/divyas/tta_learn_icml/datasets/cub200/test'
+        data_path = './datasets/cub200/test'
         add_dataset = torchvision.datasets.ImageFolder(
             root=data_path,
             transform=d_transforms)
