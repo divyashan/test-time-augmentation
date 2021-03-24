@@ -1,27 +1,29 @@
-# ICML 2020 Code Submission
+# ICCV 2021 Code Submission
 
-Reproduce the experiments from Paper #6112 with the following instructions. 
+Reproduce the experiments from Paper #9233 with the following instructions. 
 
-Replace variables 'valdir' and 'traindir' variables in setup.py to a local version of ImageNet.
+### Downloading datasets
 
-`python setup.py`
+### Training models (for Flowers-102)
 
-Set up the directory structure for the experiment inputs, outputs, and results.
+### Running experiments
 
-`python train.py`
+Run the following from the root directory: 
 
-Generate the outputs of each step and write the results to dataframes in the ./results directory
+```./run_expmts.sh```
 
-`python speed.py`
+This command will run all experiments for the paper. It will create a directory for each dataset's intermediate outputs. Within this directory, there is a folder for the model outputs for each TTA policy. Within each TTA policy folder, the script will write the model outputs for that policy, the aggregated model outputs given a specific aggregation method, and the saved aggregation models. 
 
-Produce the speed measurements presented in Section 7.2.
+Results for each aggregation model are stored under "./results/<dataset-name>/<tta-policy>/<dataset-split>/<aggregation-model-name>".
 
-`python plot.py`
 
-This will produce figures included in the submission.
+### Reproducing plots
 
-`python class_acc_plots.py`
+Figures 1 & 2, which show the number of corruptions and corrections introduced by TTA, can be reproduced via ./notebooks/dataset_section_figures.ipynb.
 
-This will produce the figures in Section 7.3 and the supplement, and save them to the ./figs directory.
+Figures 3, 4, & 5, which analyze the errors introduced by TTA can be reproduced via ./notebooks/imagenet_errors.ipynb (Figure 3) and ./notebooks/flowers102_errors.ipynb (Figures 4 & 5).
 
+The results tables (and the Latex code for each) can be produced by running ./notebooks/Results Table.ipynb.
+
+Figure 6, which plots the augmentation weights learned by our method on the standard TTA policy, can be reproduced via ./notebooks/analyze_weights.ipynb.
 
