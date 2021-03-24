@@ -97,8 +97,6 @@ def main():
     dataset = args.dataset
     if dataset == 'flowers102':
         n_classes = 102
-    elif dataset == 'birds200':
-        n_classes = 200
     elif dataset == 'imnet':
         n_classes = 1000
 

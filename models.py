@@ -41,16 +41,6 @@ def get_resnext101_32x48d(weight_fname):
 
     return get_model
 
-def get_mnist_model(model_name):
-    if 'mnist_cnn' in model_name:
-        model = Net()
-    elif model_name == 'mnist_1NN':
-        input_size = 784
-        hidden_size = 500
-        num_classes = 10
-    model.load_state_dict(torch.load('./saved_models/mnist/'+ model_name + '.pth'))
-    return model
-
 def get_flowers_model(model_name):
     m_name = model_name
     m_name = '_'.join(m_name.split('_')[:1])
@@ -68,31 +58,6 @@ def get_flowers_model(model_name):
     model.load_state_dict(torch.load(m_path))
     return model
 
-def get_birds_model(model_name):
-    m_name = model_name
-    m_name = '_'.join(m_name.split('_')[:1])
-    if m_name == 'MobileNetV2':
-        m_name = 'mobilenet_v2'
-    if m_name == 'inceptionv3':
-        m_name = 'inception_v3'
-    model = make_model(
-                    m_name,
-                    pretrained=True,
-                    num_classes=n_classes,
-                    input_size=(224, 224), 
-                )
-    m_path = './saved_models/birds200/' + model_name+ '.pth'
-    model.load_state_dict(torch.load(m_path))
-    return model
-    
-def get_svhn_model():
-    model = ptcv_get_model("resnet20_svhn", pretrained=True)
-    return model
-
-def get_cifar10_model():
-    model_raw, _, _= selector.select('cifar10')
-    return model_raw
-
 def get_cifar100_model():
     model_raw, _, _= selector.select('cifar100')
     return model_raw
@@ -104,13 +69,6 @@ def get_stl10_model():
 def get_pretrained_model(model_name, dataset):
     if dataset == 'imnet':
         return get_pretrained_model_imnet(model_name)
-    elif dataset == 'cifar10':
-        if len(model_name.split('_')) == 3:
-            model = get_cifar10_model()
-            model.load_state_dict(torch.load('./saved_models/cifar10/' + model_name))
-            return model
-        else:
-            return get_cifar10_model()
     elif dataset == 'cifar100':
         if len(model_name.split('_')) == 3:
             model = get_cifar100_model()
@@ -120,14 +78,8 @@ def get_pretrained_model(model_name, dataset):
             return get_cifar100_model() 
     elif dataset == 'stl10':
         return get_stl10_model()
-    elif dataset == 'svhn':
-        return get_svhn_model()
     elif dataset == 'flowers102':
         return get_flowers_model(model_name)
-    elif dataset == 'birds200':
-        return get_birds_model(model_name)
-    elif dataset == 'mnist':
-        return get_mnist_model(model_name)
 
 def get_pretrained_model_imnet(model_name):
     model_f_dict = {}
