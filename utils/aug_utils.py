@@ -53,3 +53,25 @@ def write_aug_list(aug_transform_parameters, aug_order):
         parsed = [parse_f(param) for parse_f,param in zip(parse_fs,params)]
         parsed_params.append(parsed)
     return parsed_params
+
+def invert_aug_list(aug_list, aug_order):
+    def parse_five_crop(num):
+        num_map = {0:'center crop', 1: 'upper left crop', 2: 'upper right crop', 3: 'lower left crop',
+                   4: 'lower right', 5: 'uncropped original'}
+        return num_map[num]
+    def parse_flip(num):
+        num_map = {0: 'no hflip', 1: 'hflip'}
+        return num_map[num]
+    def parse_scale(num):
+        return str(num*100)[:3] + "% zoomed in"
+
+    inv_parse_fs = {'modified_five_crop': parse_five_crop, 'hflip': parse_flip, 'scale': parse_scale,
+                    'five_crop': parse_five_crop}
+
+    all_descriptions = []
+    for aug_nums in aug_list:
+        
+        descriptions = [inv_parse_fs[aug](aug_nums[i]) for i,aug in enumerate(aug_order)]
+        descriptions = ','.join(descriptions)
+        all_descriptions.append(descriptions)
+    return all_descriptions

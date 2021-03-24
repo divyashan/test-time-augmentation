@@ -9,24 +9,10 @@ import itertools
 import torch
 from torch import nn, optim
 from torch.nn.functional import softmax as torch_softmax
+from models import get_pretrained_model
 from scipy.special import softmax
 from expmt_vars import n_classes
 from scipy.optimize import nnls
-
-class ImprovedLR(nn.Module):
-    def __init__(self, n_augs, n_classes, scale=1, partial_lr_init=None):
-        super().__init__()
-        self.temperature = scale
-        self.coeffs = np.zeros((n_augs, n_classes))
-        self.partial_lr = partial_lr_init
-        self.n_classes = n_classes
-        self.n_augs = n_augs
-        self.n_epochs = 20
-
-    def forward(self, x):
-        x = x/self.temperature
-        mult = torch.Tensor(self.coeffs) * x
-        return mult.sum(axis=1) 
 
 class TTARegression(nn.Module):
     def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even'):
@@ -47,44 +33,6 @@ class TTARegression(nn.Module):
         mult = self.coeffs * x
         return mult.sum(axis=1)
 
-class TTARegressionFrozen(nn.Module):
-    def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even'):
-        super().__init__()
-        self.temperature = temp_scale
-        if initialization == 'even':
-            fill_val = 1/n_augs
-            init_array = np.full((n_augs, 1), fill_val)
-            coeffs = torch.cat([torch.Tensor(init_array) for i in range(n_classes)])
-            self.coeffs = nn.Parameter(coeffs, requires_grad = True)
-        else:
-            coeffs = torch.cat([torch.Tensor(initialization) for i in range(n_classes)], axis=1)
-            self.coeffs = nn.Parameter(coeffs, requires_grad = True)
-
-    def forward(self, x):
-        x = x/self.temperature
-        mult = (self.coeffs / torch.sum(self.coeffs, axis=0)) * x 
-        #mult = self.coeffs * x
-        return mult.sum(axis=1)
-
-class ClassPartialLR(nn.Module):
-    def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even'):
-        super().__init__()
-        self.temperature = temp_scale
-        if initialization == 'even':
-            fill_val = 1/n_augs
-            init_array = np.full((n_augs, 1), fill_val)
-            coeffs = torch.cat([torch.Tensor(init_array) for i in range(n_classes)])
-            self.coeffs = nn.Parameter(coeffs, requires_grad = True)
-        else:
-            coeffs = torch.cat([torch.Tensor(initialization) for i in range(n_classes)], axis=1)
-            self.coeffs = nn.Parameter(coeffs, requires_grad = True)
-
-    def forward(self, x):
-        x = x/self.temperature
-        mult = (self.coeffs / torch.sum(self.coeffs, axis=0)) * x 
-        #mult = self.coeffs * x
-        return mult.sum(axis=1)
-
 class TTAPartialRegression(nn.Module):
     def __init__(self, n_augs, n_classes, temp_scale=1, initialization='even',coeffs=[]):
         super().__init__()
@@ -99,7 +47,7 @@ class TTAPartialRegression(nn.Module):
             elif initialization== 'original':
                 self.coeffs.data[0,:].fill_(1)
                 self.coeffs.data[1,:].fill_(0)
-             
+    
     def forward(self, x):
         # Computes the outputs / predictions
         x = x/self.temperature
@@ -149,3 +97,99 @@ class GPS(nn.Module):
         mult = torch.mean(x[:,self.idxs], axis=1)
         return mult.squeeze()
 
+
+# Predicting weights directly from image
+# Results in Supplementary Material
+class ImageWeights(nn.Module): 
+    def __init__(self, model_name, n_augs, n_classes, n_features, orig_idx, dataset):
+        super().__init__()
+        self.model = get_pretrained_model(model_name, dataset)
+        for param in self.model.parameters():
+            param.requires_grad = False
+        self.n_augs = n_augs
+        self.orig_idx = orig_idx
+        n_full = n_classes
+        self.fc3 = nn.Linear(n_features, n_full)
+        self.fc4 = nn.Linear(n_full, n_augs)
+        self.sigmoid = nn.Sigmoid()
+        self.sm = nn.Softmax(dim=1)
+        
+        nn.init.xavier_uniform(self.fc3.weight)
+        nn.init.xavier_uniform(self.fc4.weight)
+
+                
+    def forward(self, x):
+        # x is a [B, A, H, W] matrix 
+        orig_image = x[self.orig_idx]
+        f = self.model.features(orig_image)
+        w = self.fc3(torch.flatten(f, 1))
+        w = F.relu(w)
+        w = self.fc4(w)
+        w = self.sm(w)
+        
+        aug_preds = []
+        for i in range(len(x)):
+            aug_preds.append(self.model(x[i]))
+        
+        aug_preds = torch.stack(aug_preds)
+        aug_preds = aug_preds.permute(2, 1, 0)
+        aug_preds = aug_preds * w
+        aug_pred = aug_preds.mean(axis=2)
+        return aug_pred.permute(1, 0)
+    
+    def get_w(self, x):
+        orig_image = x[self.orig_idx]
+        f = self.model.features(orig_image)
+
+        w = self.fc3(f)
+        return  self.sm(w)
+        
+# Predicting when to choose TTA prediction over original model from image
+# Results in Supplementary Material
+class ImageDeferral(nn.Module):
+    def __init__(self, model_name, n_classes, n_features, orig_idx, dataset):
+        super().__init__()
+        self.model = get_pretrained_model(model_name, dataset)
+        for param in self.model.parameters():
+            param.requires_grad = False
+        self.orig_idx = orig_idx
+#         self.conv1 = nn.Conv2d(1, 32, 3, 1)
+#         self.conv2 = nn.Conv2d(32, 64, 3, 1)
+#         self.dropout1 = nn.Dropout2d(0.25)
+#         self.dropout2 = nn.Dropout2d(0.5) # why is the later one higher?
+#         self.fc1 = nn.Linear(9216, 128)
+        n_full = n_classes
+        self.dropout1 = nn.Dropout2d(0.5)
+        self.fc2 = nn.Linear(n_features, n_full)
+        self.fc4 = nn.Linear(n_full, 1)
+        self.sigmoid = nn.Sigmoid()
+        nn.init.xavier_uniform(self.fc2.weight)
+        nn.init.xavier_uniform(self.fc4.weight)
+        
+    def forward(self, x):
+        orig_image = x[self.orig_idx]
+        f = self.model.features(orig_image)
+        presig_s = self.fc2(torch.flatten(f, 1))
+        presig_s = F.relu(presig_s)
+        presig_s = self.fc4(presig_s)
+        s = self.sigmoid(presig_s)
+        
+        aug_preds = []
+        for i in range(len(x)):
+            aug_preds.append(self.model(x[i]))
+        
+        aug_preds = torch.stack(aug_preds)
+        aug_preds = aug_preds.permute(1, 0, 2)
+        aug_pred = aug_preds.mean(axis=1)
+        orig_pred = self.model(x[self.orig_idx])
+        
+        return (1-s)*orig_pred + (s)*aug_pred
+    
+    def get_s(self, x): 
+        f = self.model.features(x[self.orig_idx])
+        presig_s = self.fc2(torch.flatten(f, 1))
+        presig_s = F.relu(presig_s)
+        presig_s = self.dropout1(presig_s)
+        presig_s = self.fc4(presig_s)
+        s = self.sigmoid(presig_s)
+        return s

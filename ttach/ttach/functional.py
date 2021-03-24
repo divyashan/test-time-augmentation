@@ -99,44 +99,49 @@ def crop(x, x_min=None, x_max=None, y_min=None, y_max=None):
     return x[:, :, y_min:y_max, x_min:x_max]
 
 
-def crop_lt(x, crop_h, crop_w):
+def crop_lt(x, crop_h, crop_w, resize_flag=False):
     """crop left top corner"""
     orig_h = x.shape[2]
     orig_w = x.shape[3]
     x = x[:, :, 0:crop_h, 0:crop_w]
-    return x
-    #return resize(x, (orig_h, orig_w))
+    if resize_flag == False:
+        return x
+    return resize(x, (orig_h, orig_w))
 
-def crop_lb(x, crop_h, crop_w):
+def crop_lb(x, crop_h, crop_w, resize_flag=False):
     """crop left bottom corner"""
     orig_h = x.shape[2]
     orig_w = x.shape[3]
     x = x[:, :, -crop_h:, 0:crop_w]
-    return x
-    #return resize(x, (orig_h, orig_w))
+    if  resize_flag == False:
+        return x
+    return resize(x, (orig_h, orig_w))
 
-def crop_rt(x, crop_h, crop_w):
+def crop_rt(x, crop_h, crop_w, resize_flag=False):
     """crop right top corner"""
     orig_h = x.shape[2]
     orig_w = x.shape[3]
     x = x[:, :, 0:crop_h, -crop_w:]
-    return x
-    #return resize(x, (orig_h, orig_w))
+    if resize_flag == False:
+        return x
+    return resize(x, (orig_h, orig_w))
 
-def crop_rb(x, crop_h, crop_w):
+def crop_rb(x, crop_h, crop_w, resize_flag=False):
     """crop right bottom corner"""
     orig_h = x.shape[2]
     orig_w = x.shape[3]
     x = x[:, :, -crop_h:, -crop_w:]
-    return x
-    #return resize(x, (orig_h, orig_w))
+    if resize_flag == False:
+        return x
+    return resize(x, (orig_h, orig_w))
 
-def crop_c(x, crop_h, crop_w):
+def crop_c(x, crop_h, crop_w, resize_flag=False):
     orig_h = x.shape[2]
     orig_w = x.shape[3]
     x = center_crop(x, crop_h, crop_w)
-    #return resize(x, (orig_h, orig_w))
-    return x
+    if resize_flag == False:
+        return x
+    return resize(x, (orig_h, orig_w))
 
 def crop_orig(x, crop_h, crop_w):
     return x

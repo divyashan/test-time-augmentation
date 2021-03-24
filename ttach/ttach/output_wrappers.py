@@ -41,9 +41,11 @@ class ClassificationTTAWrapperOutput(nn.Module):
         n_transforms = len(self.transforms)
         for transformer in self.transforms:
             augmented_image = transformer.augment_image(image)
+            
             # TODO: make this conditional on cuda usage
             augmented_image = augmented_image.cuda()
             augmented_images.append(augmented_image)
+        
         augmented_images = torch.cat(augmented_images, axis=0)
         augmented_outputs = self.model(augmented_images,  *args)
         n_classes = augmented_outputs.shape[1]

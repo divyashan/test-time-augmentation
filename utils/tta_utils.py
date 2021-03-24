@@ -36,12 +36,29 @@ def split_val_outputs(file_path):
         outputs = np.concatenate([hf[ok][:] for ok in output_keys], axis=1)
         labels = np.concatenate([hf[lk][:] for lk in label_keys])
         outputs = np.swapaxes(outputs, 0, 1)
-
-        # balanced split using sklearn? then write to two separate files?
-        X_train, X_test, y_train, y_test = train_test_split(outputs, labels, test_size=.5, random_state=42)
-        pdb.set_trace()
-        X_train_train, X_train_val, y_train_train, y_train_val = train_test_split(X_train, y_train, test_size=.2, random_state=40)
-        pdb.set_trace()
+        
+        idx_path = '/'.join(file_path.split('/')[:2]) + '/'
+        # Check to see if split has already been written
+        if os.path.isfile(idx_path + 'train_idxs.npy'):
+            print("Using cached split...")
+            train_idxs = np.load(idx_path + 'train_idxs.npy')
+            test_idxs = np.load(idx_path + 'test_idxs.npy')
+        else:
+            idxs = list(range(len(outputs)))
+            train_idxs, test_idxs = train_test_split(idxs, stratify=labels, test_size=.5, random_state=42)
+        X_train, X_test = outputs[train_idxs], outputs[test_idxs]
+        y_train, y_test = labels[train_idxs], labels[test_idxs]
+        np.save(idx_path + "train_idxs", train_idxs)
+        np.save(idx_path + "test_idxs", test_idxs) 
+        # Could standardize across models 
+        idxs = list(range(len(y_train)))
+        train_train_idxs, train_val_idxs = train_test_split(idxs, stratify=y_train, test_size=.2, random_state=42)
+        X_train_train, X_train_val = X_train[train_train_idxs], X_train[train_val_idxs]
+        y_train_train, y_train_val = y_train[train_train_idxs], y_train[train_val_idxs]
+        #X_train, X_test, y_train, y_test = train_test_split(outputs, labels, stratify=labels, test_size=.5, random_state=42)
+        #X_train_train, X_train_val, y_train_train, y_train_val = train_test_split(X_train, y_train, stratify=y_train,
+        #                                                                          test_size=.2, random_state=40)
+        
         X_train = np.swapaxes(X_train, 0, 1)
         X_test = np.swapaxes(X_test, 0, 1)
         X_train_train = np.swapaxes(X_train_train, 0, 1)
@@ -92,7 +109,7 @@ def get_calibration(train_path, orig_idx):
             return loss
         optimizer.step(eval)
         after_temperature_nll = nll_criterion(ts_model(outputs), labels).item()
-        print(before_temperature_nll, after_temperature_nll, ts_model.temperature)
+        #print("CALIBRATION: ", before_temperature_nll, after_temperature_nll, ts_model.temperature)
         temp = ts_model.temperature.detach().cpu().numpy()[0]
         return temp
 

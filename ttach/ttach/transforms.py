@@ -320,11 +320,11 @@ class ModifiedFiveCrops(ImageOnlyTransform):
     def __init__(self, crop_height, crop_width):
         crop_functions = (
             partial(F.crop_orig, crop_h=crop_height, crop_w=crop_width),
-            partial(F.crop_lt, crop_h=crop_height, crop_w=crop_width),
-            partial(F.crop_lb, crop_h=crop_height, crop_w=crop_width),
-            partial(F.crop_rb, crop_h=crop_height, crop_w=crop_width),
-            partial(F.crop_rt, crop_h=crop_height, crop_w=crop_width),
-            partial(F.crop_c, crop_h=crop_height, crop_w=crop_width),
+            partial(F.crop_lt, crop_h=crop_height, crop_w=crop_width, resize_flag=True),
+            partial(F.crop_lb, crop_h=crop_height, crop_w=crop_width, resize_flag=True),
+            partial(F.crop_rb, crop_h=crop_height, crop_w=crop_width, resize_flag=True),
+            partial(F.crop_rt, crop_h=crop_height, crop_w=crop_width, resize_flag=True),
+            partial(F.crop_c, crop_h=crop_height, crop_w=crop_width, resize_flag=True),
         )
         super().__init__("crop_fn", crop_functions)
 
@@ -338,17 +338,9 @@ class ModifiedFiveCrops(ImageOnlyTransform):
 
 
 class AllPIL(ImageOnlyTransform):
-    """Makes 4 crops for each corner + center crop
-
-    Args:
-        crop_height (int): crop height in pixels
-        crop_width (int): crop width in pixels 
-    """
-
     def __init__(self, im_size, dataset):
         all_functions = get_all_transform_fs(im_size) 
         # Here we enumerate all of the partial functions that PIL offers...based on AutoAugment paper
-        pdb.set_trace()
         super().__init__("aug_fn", all_functions)
         self.crop_h= im_size
         self.crop_w = im_size 

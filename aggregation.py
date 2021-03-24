@@ -14,6 +14,7 @@ from utils.tta_utils import get_calibration
 def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
     aug_idxs = get_aug_idxs(aug_name)
     orig_idx = get_aug_idxs('orig')
+    n_augs = len(aug_idxs)
     val_path = val_output_dir + '/' + model_name + '_val.h5'
     temp_scale = get_calibration(val_path, orig_idx)
     agg_file_path = agg_models_dir + '/' + model_name + '/' + aug_name 
@@ -29,7 +30,7 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
         if not os.path.exists(model_path):
             model = train_tta_lr(model_name, aug_name, n_epochs, 
                                  'full', dataset, n_classes, 1, coeffs) 
-        model = TTARegression(len(aug_idxs),n_classes, 1 , 'even')
+        model = TTARegression(n_augs ,n_classes, 1, 'even')
         model.load_state_dict(torch.load(model_path))
         model.eval()
         return model
@@ -40,7 +41,7 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
         if not os.path.exists(model_path):
             model = train_tta_lr(model_name, aug_name, n_epochs, 'partial', dataset, n_classes,
                                  1) 
-        model = TTAPartialRegression(len(aug_idxs),n_classes,1,'even')
+        model = TTAPartialRegression(n_augs, n_classes, 1, 'even')
         model.load_state_dict(torch.load(model_path))
         model.eval()
         return model
@@ -48,10 +49,10 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
     elif agg_name == 'ours':
         plr_path = agg_models_dir + '/'+model_name+'/'+aug_name + '/partial_lr.pth'
         flr_path = agg_models_dir + '/'+model_name+'/'+aug_name + '/full_lr.pth'
-        flr_model = TTARegression(len(aug_idxs),n_classes, 1, 'even')
+        flr_model = TTARegression(n_augs,n_classes, 1, 'even')
         flr_model.load_state_dict(torch.load(flr_path))
 
-        plr_model = TTAPartialRegression(len(aug_idxs),n_classes,temp_scale,'even')
+        plr_model = TTAPartialRegression(n_augs,n_classes,temp_scale,'even')
         plr_model.load_state_dict(torch.load(plr_path))
 
         val_f = h5py.File(val_output_dir + '/' + model_name + '_val_val.h5', 'r')
@@ -78,6 +79,12 @@ def get_agg_f(aug_name, agg_name, model_name, dataset, n_classes):
         n_policies = 3
         model = GPS(n_policies, val_path, temp_scale)
         return model
+    
+    elif agg_name == 'image_deferral':
+        model = ImageDeferral(model_name, n_augs, n_classes, n_features, orig_idx, dataset)
+    elif agg_name == 'image_weights':
+        model = ImageWeights(model_name, n_augs, n_classes, n_features, orig_idx, dataset)
+        
         
 def mean_agg_f(n_augs, n_classes):#
     coeffs = np.zeros((n_augs, n_classes))
