@@ -47,11 +47,6 @@ def setup(dataset, n_classes, model_name, aug_order):
     if dataset == 'imnet':
         train_dir = "/data/ddmg/neuro/datasets/ILSVRC2012/train"
         val_dir = "/data/ddmg/neuro/datasets/ILSVRC2012/val"
-    aug_order = ['pil']
-    #aug_order = ['hflip', 'five_crop', 'scale']
-    #aug_order = ['hflip', 'five_crop']
-    #aug_order = ['hflip', 'modified_five_crop', 'scale']
-    #aug_order = ['hflip', 'scale']
     tta_policy = '_'.join(sorted(aug_order))
     train_output_dir = "./" + dataset + "/" + tta_policy + "/model_outputs/train"
     val_output_dir = "./" + dataset + "/" + tta_policy + "/model_outputs/val"

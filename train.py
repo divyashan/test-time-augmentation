@@ -13,14 +13,13 @@ dataset = sys.argv[1]
 n_classes = int(sys.argv[2])
 model_name = sys.argv[3]
 gpu_arg = sys.argv[4]
-aug_order = ['pil']
-#aug_order = ['hflip', 'five_crop', 'scale']
-#aug_order = ['hflip', 'vflip']
-#aug_order = ['flips']
-#aug_order = ['hflip', 'modified_five_crop', 'scale']
-#aug_order = ['hflip', 'scale']
+policy = sys.argv[5]
+if policy == 'expanded':
+    aug_order = ['pil']
+else:
+    aug_order = ['hflip', 'five_crop', 'scale']
 
-parts = sys.argv[5]
+parts = sys.argv[6]
 gen_val_outputs = True if parts[0] == '1' else False
 split_val = True if parts[1] == '1' else False
 evaluate = True if parts[2] == '1' else False
